@@ -368,7 +368,7 @@ const SPEC = {
   Tablet_Weight:{min:190,max:215}, Disintegration_Time:{min:0,max:15}
 };
 
-/* ── FALLBACK: physics math when Flask offline ── */
+/* ── FALLBACK: physics math when FastAPI offline ── */
 function genBatchFallback(params, idx){
   const {Compression_Force:cf,Machine_Speed:ms,Drying_Temp:dt,Drying_Time:dtime,
          Granulation_Time:gt,Binder_Amount:ba,Lubricant_Conc:la,Moisture_Content:mc} = params;
@@ -441,7 +441,7 @@ async function loadBatches(){
   // Show loading state
   document.getElementById('tableBody').innerHTML =
     `<tr><td colspan="9" style="text-align:center;padding:2rem;font-family:var(--fm);font-size:.75rem;color:var(--muted);">
-      ⏳ Loading real model predictions from Flask...
+      ⏳ Loading real model predictions from FastAPI...
     </td></tr>`;
 
   // Try Flask first
@@ -449,30 +449,33 @@ async function loadBatches(){
   setApiStatus(!!testResp);
 
   if(testResp){
-    // Flask is online — batch all 60 predictions
-    // Do them in groups of 10 to avoid overwhelming
+    // FastAPI online — fetch 30 predictions in parallel batches of 10
     usingRealData = true;
-    const batches = [];
-    for(let i=0;i<60;i++){
-      const b = await fetchRealBatch(REAL_PARAMS[i], i);
-      if(b){ batches.push(b); }
-      else  { batches.push(genBatchFallback(REAL_PARAMS[i], i)); }
-      // Update progress every 10 batches
-      if((i+1)%10===0){
-        document.getElementById('tableBody').innerHTML =
-          `<tr><td colspan="9" style="text-align:center;padding:2rem;font-family:var(--fm);font-size:.75rem;color:var(--g2);">
-            ✅ Loaded ${i+1}/60 real predictions...
-          </td></tr>`;
+    const allResults = [];
+
+    for(let chunk=0; chunk<3; chunk++){
+      const start = chunk * 10;
+      const promises = [];
+      for(let i=start; i<start+10; i++){
+        promises.push(
+          fetchRealBatch(REAL_PARAMS[i], i).then(b => b || genBatchFallback(REAL_PARAMS[i], i))
+        );
       }
+      const chunkResults = await Promise.all(promises);
+      allResults.push(...chunkResults);
+      document.getElementById('tableBody').innerHTML =
+        `<tr><td colspan="9" style="text-align:center;padding:2rem;font-family:var(--fm);font-size:.75rem;color:var(--g2);">
+          ✅ Loaded ${allResults.length}/30 real predictions...
+        </td></tr>`;
     }
-    ALL_BATCHES = batches;
+    ALL_BATCHES = allResults;
     // Show LIVE badge
     const header = document.querySelector('.ph-chip');
     if(header) header.textContent = '🟢 LIVE MODEL DATA';
   } else {
-    // Flask offline — use fallback math
+    // FastAPI offline — use fallback math
     usingRealData = false;
-    ALL_BATCHES = REAL_PARAMS.map((p,i)=>genBatchFallback(p,i));
+    ALL_BATCHES = REAL_PARAMS.slice(0,30).map((p,i)=>genBatchFallback(p,i));
   }
 
   dataLoaded = true;
