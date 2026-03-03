@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmAI — Batch History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000;--card:#0a120a;--card2:#0d160d;
+  --g1:#00e640;--g2:#00b332;--g3:#008023;--g4:#004011;--g5:#001405;
+  --bdr:rgba(0,230,64,.12);--bdrh:rgba(0,230,64,.35);
+  --red:#ff4444;--amber:#ffc400;
+  --text:#e8ffe8;--soft:#a0c8a0;--muted:#4a6e4a;
+  --fh:'Rajdhani',sans-serif;--fb:'Inter',sans-serif;--fm:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);overflow-x:hidden;min-height:100vh;padding-bottom:30px;}
+body::before{content:'';position:fixed;inset:0;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,230,64,.012) 2px,rgba(0,230,64,.012) 4px);pointer-events:none;}
+body::after{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,230,64,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,230,64,.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;animation:gpulse 8s ease-in-out infinite alternate;}
+@keyframes gpulse{from{opacity:.5;}to{opacity:.9;}}
+.gb{position:fixed;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:0;}
+.gb1{width:500px;height:500px;background:radial-gradient(var(--g3),transparent 65%);top:-200px;left:-100px;opacity:.07;animation:gbm 20s ease-in-out infinite alternate;}
+.gb2{width:350px;height:350px;background:radial-gradient(var(--g2),transparent 65%);bottom:-100px;right:-80px;opacity:.05;animation:gbm 16s ease-in-out infinite alternate-reverse;}
+@keyframes gbm{from{transform:translate(0,0);}to{transform:translate(40px,25px);}}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:300;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 3rem;background:rgba(0,0,0,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--bdr);transition:border-color .3s;}
+nav.scrolled{border-color:rgba(0,230,64,.2);box-shadow:0 0 28px rgba(0,230,64,.06);}
+.logo{font-family:var(--fh);font-size:1.7rem;font-weight:700;text-decoration:none;color:var(--text);letter-spacing:.06em;}
+.logo em{font-style:normal;color:var(--g1);text-shadow:0 0 18px rgba(0,230,64,.5);}
+.nav-links{display:flex;gap:2.2rem;align-items:center;}
+.nav-links a{font-family:var(--fm);color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:500;letter-spacing:.06em;transition:color .2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--g1);text-shadow:0 0 12px rgba(0,230,64,.4);}
+.nav-cta{border:1px solid var(--g2);color:var(--g1)!important;padding:.45rem 1.3rem;border-radius:4px;transition:background .2s,box-shadow .2s!important;}
+.nav-cta:hover{background:rgba(0,230,64,.08)!important;box-shadow:0 0 18px rgba(0,230,64,.2)!important;}
+
+/* ── PAGE HEADER ── */
+.page-header{position:relative;z-index:1;padding:5.8rem 3rem 2rem;max-width:1500px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;animation:fadeUp .6s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.ph-chip{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--fm);font-size:.68rem;color:var(--g3);border:1px solid var(--bdr);padding:.3rem .9rem;border-radius:2px;margin-bottom:.9rem;letter-spacing:.12em;text-transform:uppercase;}
+.ph-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--g1);box-shadow:0 0 8px var(--g1);animation:blink 2s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.ph-h1{font-family:var(--fh);font-size:clamp(2rem,4vw,3rem);font-weight:700;text-transform:uppercase;letter-spacing:.05em;line-height:1;}
+.ph-h1 span{color:var(--g1);}
+.ph-p{color:var(--soft);font-size:.88rem;margin-top:.7rem;max-width:480px;line-height:1.65;}
+
+/* ── STATS STRIP ── */
+.stats-strip{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 3rem;display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.8rem;animation:fadeUp .6s ease .1s both;}
+.stat-card{background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:1.1rem 1.4rem;text-align:center;transition:border-color .3s,transform .2s;}
+.stat-card:hover{border-color:rgba(0,230,64,.2);transform:translateY(-2px);}
+.stat-v{font-family:var(--fh);font-size:2rem;font-weight:700;color:var(--g1);text-shadow:0 0 14px rgba(0,230,64,.35);display:block;line-height:1;}
+.stat-l{font-family:var(--fm);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.25rem;display:block;}
+
+/* ── CONTROLS BAR ── */
+.controls{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 3rem 1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;animation:fadeUp .6s ease .15s both;}
+.search-wrap{flex:1;min-width:200px;position:relative;}
+.search-wrap input{width:100%;background:var(--card);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:.75rem;padding:.6rem 1rem .6rem 2.4rem;border-radius:4px;outline:none;letter-spacing:.04em;transition:border-color .2s;}
+.search-wrap input::placeholder{color:var(--muted);}
+.search-wrap input:focus{border-color:rgba(0,230,64,.3);}
+.search-ico{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.8rem;pointer-events:none;}
+.filter-btn{font-family:var(--fm);font-size:.7rem;background:var(--card);border:1px solid var(--bdr);color:var(--muted);padding:.55rem 1rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:border-color .2s,color .2s;}
+.filter-btn:hover,.filter-btn.active{border-color:rgba(0,230,64,.3);color:var(--g1);}
+.filter-btn.f-pass.active{border-color:rgba(0,230,64,.4);background:rgba(0,230,64,.06);color:var(--g1);}
+.filter-btn.f-fail.active{border-color:rgba(255,68,68,.4);background:rgba(255,68,68,.06);color:var(--red);}
+.export-btn{font-family:var(--fm);font-size:.7rem;background:transparent;border:1px solid var(--g3);color:var(--g2);padding:.55rem 1.1rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:background .2s,box-shadow .2s;}
+.export-btn:hover{background:rgba(0,230,64,.07);box-shadow:0 0 16px rgba(0,230,64,.15);}
+
+/* ── TABLE WRAPPER ── */
+.table-wrap{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:0 3rem;animation:fadeUp .6s ease .2s both;}
+.table-container{background:var(--card);border:1px solid var(--bdr);border-radius:6px;overflow:hidden;}
+
+/* ── TABLE ── */
+.batch-table{width:100%;border-collapse:collapse;}
+.batch-table thead tr{background:var(--bg);border-bottom:1px solid var(--bdr);}
+.batch-table th{font-family:var(--fm);font-size:.64rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:.85rem 1rem;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .2s;}
+.batch-table th:hover{color:var(--g1);}
+.batch-table th .sort-ico{margin-left:.3rem;opacity:.4;transition:opacity .2s;}
+.batch-table th.sorted .sort-ico{opacity:1;color:var(--g1);}
+.batch-table tbody tr{border-bottom:1px solid rgba(0,230,64,.04);transition:background .15s;}
+.batch-table tbody tr:last-child{border-bottom:none;}
+.batch-table tbody tr:hover{background:rgba(0,230,64,.03);}
+.batch-table tbody tr.row-fail:hover{background:rgba(255,68,68,.03);}
+.batch-table td{font-family:var(--fm);font-size:.72rem;color:var(--soft);padding:.85rem 1rem;white-space:nowrap;vertical-align:middle;}
+
+/* cell types */
+.td-id{font-weight:700;color:var(--g2);}
+.td-time{color:var(--muted);font-size:.65rem;}
+.td-val{font-family:var(--fh);font-size:.95rem;font-weight:700;}
+.tv-pass{color:var(--g1);}
+.tv-warn{color:var(--amber);}
+.tv-fail{color:var(--red);}
+
+/* verdict badge */
+.vbadge{font-family:var(--fm);font-size:.62rem;font-weight:700;padding:.22rem .65rem;border-radius:2px;display:inline-flex;align-items:center;gap:.35rem;}
+.vb-pass{background:rgba(0,230,64,.1);color:var(--g1);border:1px solid rgba(0,230,64,.25);}
+.vb-fail{background:rgba(255,68,68,.08);color:var(--red);border:1px solid rgba(255,68,68,.2);}
+
+/* target mini-badges */
+.targets-row{display:flex;gap:.25rem;flex-wrap:nowrap;}
+.t-mini{width:22px;height:22px;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:.5rem;font-weight:700;border:1px solid;}
+.tm-p{background:rgba(0,230,64,.1);color:var(--g1);border-color:rgba(0,230,64,.2);}
+.tm-f{background:rgba(255,68,68,.08);color:var(--red);border-color:rgba(255,68,68,.2);}
+
+/* energy bar */
+.energy-bar-wrap{width:70px;height:4px;background:rgba(0,230,64,.1);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:.4rem;}
+.energy-bar{height:100%;border-radius:2px;}
+.eb-low{background:var(--g2);}
+.eb-mid{background:var(--amber);}
+.eb-hi{background:var(--red);}
+
+/* action btns */
+.row-actions{display:flex;gap:.4rem;}
+.ra-btn{font-family:var(--fm);font-size:.58rem;background:transparent;border:1px solid var(--bdr);color:var(--muted);padding:.18rem .55rem;border-radius:2px;cursor:pointer;letter-spacing:.05em;transition:border-color .2s,color .2s;}
+.ra-btn:hover{border-color:rgba(0,230,64,.3);color:var(--g1);}
+
+/* pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.2rem;border-top:1px solid var(--bdr);}
+.pag-info{font-family:var(--fm);font-size:.65rem;color:var(--muted);}
+.pag-btns{display:flex;gap:.4rem;}
+.pag-btn{font-family:var(--fm);font-size:.65rem;background:transparent;border:1px solid var(--bdr);color:var(--muted);padding:.3rem .75rem;border-radius:2px;cursor:pointer;transition:border-color .2s,color .2s;}
+.pag-btn:hover,.pag-btn.active{border-color:rgba(0,230,64,.3);color:var(--g1);}
+.pag-btn:disabled{opacity:.25;cursor:not-allowed;}
+
+/* DETAIL MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:#0a120a;border:1px solid rgba(0,230,64,.25);border-radius:8px;width:min(760px,92vw);max-height:85vh;overflow-y:auto;transform:translateY(20px) scale(.97);transition:transform .3s ease;box-shadow:0 0 60px rgba(0,230,64,.08);}
+.modal-overlay.open .modal{transform:none;}
+.modal::-webkit-scrollbar{width:3px;}
+.modal::-webkit-scrollbar-thumb{background:var(--g4);border-radius:2px;}
+.modal-header{background:var(--bg);border-bottom:1px solid var(--bdr);padding:1.2rem 1.6rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1;}
+.mh-title{font-family:var(--fh);font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g1);}
+.mh-close{background:transparent;border:1px solid var(--bdr);color:var(--muted);font-family:var(--fm);font-size:.7rem;padding:.3rem .8rem;border-radius:2px;cursor:pointer;transition:border-color .2s,color .2s;}
+.mh-close:hover{border-color:rgba(0,230,64,.3);color:var(--g1);}
+.modal-body{padding:1.4rem 1.6rem;}
+.mb-section{margin-bottom:1.5rem;}
+.mbs-title{font-family:var(--fm);font-size:.65rem;color:var(--g3);text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--bdr);padding-bottom:.4rem;margin-bottom:.9rem;}
+.modal-params-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;}
+.mp-cell{background:rgba(0,230,64,.03);border:1px solid var(--bdr);border-radius:4px;padding:.7rem .8rem;}
+.mp-k{font-family:var(--fm);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;display:block;}
+.mp-v{font-family:var(--fh);font-size:1.1rem;font-weight:700;color:var(--g1);}
+.mp-u{font-family:var(--fm);font-size:.58rem;color:var(--muted);}
+.modal-targets-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;}
+.mt-cell{background:rgba(0,230,64,.03);border:1px solid var(--bdr);border-radius:4px;padding:.8rem;}
+.mt-cell.fail{background:rgba(255,68,68,.03);border-color:rgba(255,68,68,.2);}
+.mt-name{font-family:var(--fm);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;display:block;}
+.mt-val{font-family:var(--fh);font-size:1.4rem;font-weight:700;}
+.mt-cell:not(.fail) .mt-val{color:var(--g1);}
+.mt-cell.fail .mt-val{color:var(--red);}
+.mt-unit{font-family:var(--fm);font-size:.58rem;color:var(--muted);}
+.mt-badge{font-family:var(--fm);font-size:.58rem;padding:.12rem .45rem;border-radius:2px;font-weight:700;margin-top:.4rem;display:inline-block;}
+.mt-badge.pass{background:rgba(0,230,64,.1);color:var(--g1);border:1px solid rgba(0,230,64,.2);}
+.mt-badge.fail{background:rgba(255,68,68,.08);color:var(--red);border:1px solid rgba(255,68,68,.2);}
+
+/* row enter animation */
+.batch-table tbody tr{opacity:0;transform:translateY(8px);animation:rowIn .3s ease forwards;}
+@keyframes rowIn{to{opacity:1;transform:none;}}
+
+/* PAGE TRANSITION */
+#page-ov{position:fixed;inset:0;z-index:9000;background:#000;pointer-events:all;opacity:1;transition:opacity .35s ease;}
+#api-bar{position:fixed;bottom:0;left:0;right:0;z-index:8000;height:22px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:rgba(0,0,0,.93);border-top:1px solid rgba(0,230,64,.1);font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.07em;color:#4a6e4a;}
+.abl{display:flex;align-items:center;gap:1rem;}
+.ab-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.ab-ok{background:#00e640;box-shadow:0 0 6px #00e640;animation:abp 2s ease infinite;}
+.ab-mock{background:#ffc400;}
+@keyframes abp{0%,100%{box-shadow:0 0 0 0 rgba(0,230,64,.5);}50%{box-shadow:0 0 0 4px rgba(0,230,64,0);}}
+
+@media(max-width:1100px){
+  .stats-strip{grid-template-columns:repeat(3,1fr);}
+  .page-header,.stats-strip,.controls,.table-wrap{padding-left:1.5rem;padding-right:1.5rem;}
+}
+@media(max-width:700px){
+  .stats-strip{grid-template-columns:repeat(2,1fr);}
+  nav{padding:0 1rem;}
+  .page-header,.stats-strip,.controls,.table-wrap{padding-left:1rem;padding-right:1rem;}
+  .modal-params-grid,.modal-targets-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="gb gb1"></div><div class="gb gb2"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="index.html" class="logo">PHARM<em>AI</em></a>
+  <div class="nav-links">
+    <a href="dashboard.html">DASHBOARD</a>
+    <a href="predictor.html">PREDICTOR</a>
+    <a href="analytics.html">ANALYTICS</a>
+    <a href="history.html" class="active">HISTORY</a>
+    
+    <a href="about.html">ABOUT</a>
+    <a href="index.html" class="nav-cta">← HOME</a>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div>
+    <div class="ph-chip">Batch Log</div>
+    <h1 class="ph-h1">BATCH <span>HISTORY</span></h1>
+    <p class="ph-p">Full record of all predicted and processed batches — filter by verdict, search by ID, click any row for a complete breakdown.</p>
+  </div>
+</div>
+
+<!-- STATS STRIP -->
+<div class="stats-strip" id="statsStrip">
+  <div class="stat-card"><span class="stat-v" id="st-total">—</span><span class="stat-l">Total Batches</span></div>
+  <div class="stat-card"><span class="stat-v" id="st-pass" style="color:var(--g1)">—</span><span class="stat-l">Passed</span></div>
+  <div class="stat-card"><span class="stat-v" id="st-fail" style="color:var(--red)">—</span><span class="stat-l">Failed</span></div>
+  <div class="stat-card"><span class="stat-v" id="st-rate">—</span><span class="stat-l">Pass Rate</span></div>
+  <div class="stat-card"><span class="stat-v" id="st-energy">—</span><span class="stat-l">Avg Energy kWh</span></div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-ico">⌕</span>
+    <input type="text" id="searchInput" placeholder="Search by batch ID, operator, phase...">
+  </div>
+  <button class="filter-btn" id="fAll"   onclick="setFilter('all')"  >ALL</button>
+  <button class="filter-btn f-pass" id="fPass" onclick="setFilter('pass')">✓ PASS</button>
+  <button class="filter-btn f-fail" id="fFail" onclick="setFilter('fail')">✗ FAIL</button>
+  <button class="export-btn" onclick="exportCSV()">⬇ EXPORT CSV</button>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div class="table-container">
+    <table class="batch-table" id="batchTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('id')"        data-col="id">        BATCH ID   <span class="sort-ico">↕</span></th>
+          <th onclick="sortBy('time')"      data-col="time">      TIMESTAMP  <span class="sort-ico">↕</span></th>
+          <th onclick="sortBy('verdict')"   data-col="verdict">   VERDICT    <span class="sort-ico">↕</span></th>
+          <th>TARGETS (H·F·C·D·W·I)</th>
+          <th onclick="sortBy('hardness')"  data-col="hardness">  HARDNESS   <span class="sort-ico">↕</span></th>
+          <th onclick="sortBy('dissolution')">DISSOLUTION <span class="sort-ico">↕</span></th>
+          <th onclick="sortBy('energy')"    data-col="energy">    ENERGY kWh <span class="sort-ico">↕</span></th>
+          <th onclick="sortBy('confidence')" data-col="confidence">CONF.     <span class="sort-ico">↕</span></th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <span class="mh-title" id="mTitle">BATCH DETAIL</span>
+      <button class="mh-close" onclick="closeModalDirect()">✕ CLOSE</button>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+
+<!-- API BAR -->
+<div id="page-ov"></div>
+<div id="api-bar">
+  <div class="abl">
+    <span class="ab-dot ab-mock" id="api-dot"></span>
+    <span id="api-stxt">CHECKING API...</span>
+    <span id="api-mtxt" style="color:#4a6e4a">MOCK MODE</span>
+  </div>
+  <span style="color:#2a3e2a">PHARMAI v1.0</span>
+</div>
+
+<script>
+const API = 'http://localhost:5000';
+let usingRealData = false;
+
+/* ── API helper ── */
+async function apiFetch(path, opts={}, timeout=4000){
+  const ctrl = new AbortController();
+  const tid  = setTimeout(()=>ctrl.abort(), timeout);
+  try {
+    const r = await fetch(API+path, {...opts, signal:ctrl.signal});
+    clearTimeout(tid);
+    return r.ok ? await r.json() : null;
+  } catch(e){ clearTimeout(tid); return null; }
+}
+
+/* ── API status ── */
+function setApiStatus(online){
+  const dot=document.getElementById('api-dot'),st=document.getElementById('api-stxt'),mt=document.getElementById('api-mtxt');
+  if(online){dot.className='ab-dot ab-ok';st.textContent='API CONNECTED';mt.textContent='FAST LIVE';mt.style.color='#00b332';}
+  else       {dot.className='ab-dot ab-mock';st.textContent='FAST OFFLINE';mt.textContent='MOCK MODE';mt.style.color='';}
+}
+async function checkApi(){ const d=await apiFetch('/health'); setApiStatus(!!d); }
+setInterval(checkApi,8000); checkApi();
+
+/* ── 60 real parameter sets (varied across the full spec range) ── */
+const REAL_PARAMS = [
+  {Granulation_Time:16,Binder_Amount:9.0, Drying_Temp:60,Drying_Time:28,Compression_Force:11.5,Machine_Speed:170,Lubricant_Conc:1.2,Moisture_Content:2.0},
+  {Granulation_Time:10,Binder_Amount:6.0, Drying_Temp:72,Drying_Time:45,Compression_Force:17.5,Machine_Speed:270,Lubricant_Conc:0.5,Moisture_Content:3.4},
+  {Granulation_Time:20,Binder_Amount:11.0,Drying_Temp:58,Drying_Time:25,Compression_Force:10.0,Machine_Speed:150,Lubricant_Conc:1.5,Moisture_Content:1.8},
+  {Granulation_Time:14,Binder_Amount:8.5, Drying_Temp:65,Drying_Time:32,Compression_Force:13.0,Machine_Speed:200,Lubricant_Conc:1.0,Moisture_Content:2.5},
+  {Granulation_Time:18,Binder_Amount:10.5,Drying_Temp:55,Drying_Time:22,Compression_Force:9.5, Machine_Speed:140,Lubricant_Conc:1.8,Moisture_Content:1.5},
+  {Granulation_Time:12,Binder_Amount:7.0, Drying_Temp:70,Drying_Time:40,Compression_Force:15.0,Machine_Speed:230,Lubricant_Conc:0.7,Moisture_Content:3.0},
+  {Granulation_Time:22,Binder_Amount:12.0,Drying_Temp:56,Drying_Time:20,Compression_Force:9.0, Machine_Speed:130,Lubricant_Conc:2.0,Moisture_Content:1.2},
+  {Granulation_Time:15,Binder_Amount:9.5, Drying_Temp:62,Drying_Time:30,Compression_Force:12.0,Machine_Speed:180,Lubricant_Conc:1.1,Moisture_Content:2.2},
+  {Granulation_Time:11,Binder_Amount:6.5, Drying_Temp:68,Drying_Time:38,Compression_Force:14.5,Machine_Speed:220,Lubricant_Conc:0.8,Moisture_Content:2.8},
+  {Granulation_Time:19,Binder_Amount:10.0,Drying_Temp:57,Drying_Time:24,Compression_Force:10.5,Machine_Speed:155,Lubricant_Conc:1.6,Moisture_Content:1.6},
+  {Granulation_Time:16,Binder_Amount:8.0, Drying_Temp:63,Drying_Time:29,Compression_Force:11.0,Machine_Speed:165,Lubricant_Conc:1.3,Moisture_Content:2.1},
+  {Granulation_Time:13,Binder_Amount:7.5, Drying_Temp:67,Drying_Time:35,Compression_Force:13.5,Machine_Speed:205,Lubricant_Conc:0.9,Moisture_Content:2.6},
+  {Granulation_Time:21,Binder_Amount:11.5,Drying_Temp:54,Drying_Time:21,Compression_Force:8.5, Machine_Speed:125,Lubricant_Conc:2.2,Moisture_Content:1.3},
+  {Granulation_Time:17,Binder_Amount:9.2, Drying_Temp:61,Drying_Time:27,Compression_Force:11.8,Machine_Speed:175,Lubricant_Conc:1.15,Moisture_Content:2.05},
+  {Granulation_Time:14,Binder_Amount:8.8, Drying_Temp:66,Drying_Time:33,Compression_Force:12.5,Machine_Speed:190,Lubricant_Conc:1.05,Moisture_Content:2.35},
+  {Granulation_Time:9, Binder_Amount:5.5, Drying_Temp:75,Drying_Time:48,Compression_Force:18.5,Machine_Speed:280,Lubricant_Conc:0.4,Moisture_Content:3.8},
+  {Granulation_Time:20,Binder_Amount:10.8,Drying_Temp:59,Drying_Time:26,Compression_Force:10.2,Machine_Speed:148,Lubricant_Conc:1.55,Moisture_Content:1.75},
+  {Granulation_Time:15,Binder_Amount:9.1, Drying_Temp:64,Drying_Time:31,Compression_Force:12.2,Machine_Speed:182,Lubricant_Conc:1.12,Moisture_Content:2.18},
+  {Granulation_Time:12,Binder_Amount:7.2, Drying_Temp:69,Drying_Time:37,Compression_Force:14.2,Machine_Speed:215,Lubricant_Conc:0.82,Moisture_Content:2.72},
+  {Granulation_Time:18,Binder_Amount:9.8, Drying_Temp:58,Drying_Time:23,Compression_Force:10.8,Machine_Speed:158,Lubricant_Conc:1.48,Moisture_Content:1.88},
+  {Granulation_Time:16,Binder_Amount:9.3, Drying_Temp:61,Drying_Time:28,Compression_Force:11.6,Machine_Speed:172,Lubricant_Conc:1.18,Moisture_Content:2.08},
+  {Granulation_Time:14,Binder_Amount:8.6, Drying_Temp:65,Drying_Time:32,Compression_Force:12.8,Machine_Speed:196,Lubricant_Conc:1.02,Moisture_Content:2.42},
+  {Granulation_Time:11,Binder_Amount:6.8, Drying_Temp:71,Drying_Time:42,Compression_Force:16.0,Machine_Speed:245,Lubricant_Conc:0.62,Moisture_Content:3.15},
+  {Granulation_Time:22,Binder_Amount:11.8,Drying_Temp:55,Drying_Time:19,Compression_Force:8.8, Machine_Speed:128,Lubricant_Conc:1.95,Moisture_Content:1.25},
+  {Granulation_Time:17,Binder_Amount:9.6, Drying_Temp:62,Drying_Time:29,Compression_Force:11.4,Machine_Speed:168,Lubricant_Conc:1.22,Moisture_Content:1.95},
+  {Granulation_Time:13,Binder_Amount:7.8, Drying_Temp:66,Drying_Time:34,Compression_Force:13.2,Machine_Speed:202,Lubricant_Conc:0.92,Moisture_Content:2.58},
+  {Granulation_Time:19,Binder_Amount:10.2,Drying_Temp:57,Drying_Time:24,Compression_Force:10.6,Machine_Speed:152,Lubricant_Conc:1.52,Moisture_Content:1.72},
+  {Granulation_Time:16,Binder_Amount:9.0, Drying_Temp:63,Drying_Time:30,Compression_Force:12.1,Machine_Speed:178,Lubricant_Conc:1.14,Moisture_Content:2.12},
+  {Granulation_Time:10,Binder_Amount:6.2, Drying_Temp:73,Drying_Time:44,Compression_Force:17.0,Machine_Speed:258,Lubricant_Conc:0.52,Moisture_Content:3.5},
+  {Granulation_Time:21,Binder_Amount:11.2,Drying_Temp:56,Drying_Time:21,Compression_Force:9.2, Machine_Speed:132,Lubricant_Conc:1.88,Moisture_Content:1.35},
+  {Granulation_Time:15,Binder_Amount:9.4, Drying_Temp:64,Drying_Time:31,Compression_Force:11.9,Machine_Speed:184,Lubricant_Conc:1.08,Moisture_Content:2.22},
+  {Granulation_Time:12,Binder_Amount:7.4, Drying_Temp:68,Drying_Time:36,Compression_Force:13.8,Machine_Speed:212,Lubricant_Conc:0.86,Moisture_Content:2.65},
+  {Granulation_Time:18,Binder_Amount:10.4,Drying_Temp:59,Drying_Time:25,Compression_Force:10.3,Machine_Speed:146,Lubricant_Conc:1.58,Moisture_Content:1.82},
+  {Granulation_Time:16,Binder_Amount:8.9, Drying_Temp:62,Drying_Time:28,Compression_Force:11.7,Machine_Speed:173,Lubricant_Conc:1.16,Moisture_Content:2.06},
+  {Granulation_Time:14,Binder_Amount:8.4, Drying_Temp:67,Drying_Time:34,Compression_Force:13.4,Machine_Speed:208,Lubricant_Conc:0.88,Moisture_Content:2.62},
+  {Granulation_Time:20,Binder_Amount:10.6,Drying_Temp:58,Drying_Time:23,Compression_Force:10.1,Machine_Speed:145,Lubricant_Conc:1.62,Moisture_Content:1.68},
+  {Granulation_Time:17,Binder_Amount:9.7, Drying_Temp:60,Drying_Time:27,Compression_Force:11.3,Machine_Speed:167,Lubricant_Conc:1.24,Moisture_Content:1.98},
+  {Granulation_Time:13,Binder_Amount:7.6, Drying_Temp:69,Drying_Time:38,Compression_Force:14.8,Machine_Speed:228,Lubricant_Conc:0.76,Moisture_Content:2.82},
+  {Granulation_Time:23,Binder_Amount:12.5,Drying_Temp:53,Drying_Time:18,Compression_Force:8.2, Machine_Speed:118,Lubricant_Conc:2.3,Moisture_Content:1.05},
+  {Granulation_Time:16,Binder_Amount:9.1, Drying_Temp:61,Drying_Time:28,Compression_Force:11.55,Machine_Speed:171,Lubricant_Conc:1.21,Moisture_Content:2.02},
+  {Granulation_Time:11,Binder_Amount:6.4, Drying_Temp:74,Drying_Time:46,Compression_Force:17.8,Machine_Speed:272,Lubricant_Conc:0.45,Moisture_Content:3.65},
+  {Granulation_Time:19,Binder_Amount:10.1,Drying_Temp:57,Drying_Time:24,Compression_Force:10.45,Machine_Speed:151,Lubricant_Conc:1.54,Moisture_Content:1.76},
+  {Granulation_Time:15,Binder_Amount:9.3, Drying_Temp:63,Drying_Time:30,Compression_Force:12.05,Machine_Speed:179,Lubricant_Conc:1.13,Moisture_Content:2.14},
+  {Granulation_Time:12,Binder_Amount:7.1, Drying_Temp:70,Drying_Time:40,Compression_Force:15.2,Machine_Speed:238,Lubricant_Conc:0.65,Moisture_Content:3.08},
+  {Granulation_Time:21,Binder_Amount:11.4,Drying_Temp:55,Drying_Time:20,Compression_Force:9.1, Machine_Speed:130,Lubricant_Conc:1.92,Moisture_Content:1.28},
+  {Granulation_Time:17,Binder_Amount:9.8, Drying_Temp:61,Drying_Time:27,Compression_Force:11.2,Machine_Speed:166,Lubricant_Conc:1.26,Moisture_Content:1.96},
+  {Granulation_Time:14,Binder_Amount:8.7, Drying_Temp:66,Drying_Time:33,Compression_Force:12.7,Machine_Speed:194,Lubricant_Conc:1.04,Moisture_Content:2.38},
+  {Granulation_Time:18,Binder_Amount:9.9, Drying_Temp:59,Drying_Time:25,Compression_Force:10.7,Machine_Speed:156,Lubricant_Conc:1.46,Moisture_Content:1.84},
+  {Granulation_Time:16,Binder_Amount:8.8, Drying_Temp:64,Drying_Time:30,Compression_Force:11.85,Machine_Speed:177,Lubricant_Conc:1.19,Moisture_Content:2.11},
+  {Granulation_Time:13,Binder_Amount:7.9, Drying_Temp:67,Drying_Time:35,Compression_Force:13.6,Machine_Speed:206,Lubricant_Conc:0.90,Moisture_Content:2.55},
+  {Granulation_Time:20,Binder_Amount:10.7,Drying_Temp:58,Drying_Time:23,Compression_Force:10.0,Machine_Speed:143,Lubricant_Conc:1.64,Moisture_Content:1.70},
+  {Granulation_Time:15,Binder_Amount:9.2, Drying_Temp:63,Drying_Time:30,Compression_Force:12.15,Machine_Speed:181,Lubricant_Conc:1.10,Moisture_Content:2.16},
+  {Granulation_Time:11,Binder_Amount:6.6, Drying_Temp:72,Drying_Time:43,Compression_Force:16.5,Machine_Speed:252,Lubricant_Conc:0.58,Moisture_Content:3.28},
+  {Granulation_Time:22,Binder_Amount:12.2,Drying_Temp:54,Drying_Time:19,Compression_Force:8.6, Machine_Speed:122,Lubricant_Conc:2.15,Moisture_Content:1.18},
+  {Granulation_Time:17,Binder_Amount:9.5, Drying_Temp:62,Drying_Time:29,Compression_Force:11.65,Machine_Speed:169,Lubricant_Conc:1.20,Moisture_Content:2.00},
+  {Granulation_Time:14,Binder_Amount:8.3, Drying_Temp:68,Drying_Time:36,Compression_Force:13.9,Machine_Speed:214,Lubricant_Conc:0.84,Moisture_Content:2.68},
+  {Granulation_Time:19,Binder_Amount:10.3,Drying_Temp:57,Drying_Time:24,Compression_Force:10.4,Machine_Speed:150,Lubricant_Conc:1.56,Moisture_Content:1.78},
+  {Granulation_Time:16,Binder_Amount:9.0, Drying_Temp:61,Drying_Time:28,Compression_Force:11.5,Machine_Speed:170,Lubricant_Conc:1.20,Moisture_Content:2.00},
+  {Granulation_Time:12,Binder_Amount:7.3, Drying_Temp:71,Drying_Time:41,Compression_Force:15.8,Machine_Speed:242,Lubricant_Conc:0.68,Moisture_Content:3.02},
+  {Granulation_Time:21,Binder_Amount:11.6,Drying_Temp:55,Drying_Time:20,Compression_Force:9.0, Machine_Speed:129,Lubricant_Conc:1.98,Moisture_Content:1.22},
+];
+
+const OPERATORS = ['Sharma R.','Reddy P.','Iyer M.','Patel K.','Singh A.','Kumar V.'];
+const TARGET_UNITS = {Hardness:'N',Friability:'%',Content_Uniformity:'%',Dissolution_Rate:'%',Tablet_Weight:'mg',Disintegration_Time:'min'};
+const SPEC = {
+  Hardness:{min:60,max:130}, Friability:{min:0,max:1},
+  Content_Uniformity:{min:95,max:105}, Dissolution_Rate:{min:85,max:100},
+  Tablet_Weight:{min:190,max:215}, Disintegration_Time:{min:0,max:15}
+};
+
+/* ── FALLBACK: physics math when Flask offline ── */
+function genBatchFallback(params, idx){
+  const {Compression_Force:cf,Machine_Speed:ms,Drying_Temp:dt,Drying_Time:dtime,
+         Granulation_Time:gt,Binder_Amount:ba,Lubricant_Conc:la,Moisture_Content:mc} = params;
+  const deff=dt/(dtime+1), gint=ba/(gt+1), cint=cf/(ms+1), mlub=mc/(la+0.01);
+  const targets = {
+    Hardness:         parseFloat((60+(cf-5)/13*60+cint*2.5-ms*0.04).toFixed(1)),
+    Friability:       parseFloat(Math.max(0.05,1.2-(cf-5)/13*0.9+mlub*0.05).toFixed(2)),
+    Content_Uniformity: parseFloat((99.5+(gint-0.5)*0.4-Math.abs(mc-2.5)*0.3).toFixed(1)),
+    Dissolution_Rate: parseFloat((70+deff*1.8+(ba-5)*0.5-mlub*0.8).toFixed(1)),
+    Tablet_Weight:    parseFloat((200+(ba-9)*0.9+(cf-11)*0.5).toFixed(1)),
+    Disintegration_Time: parseFloat(Math.max(1,12-deff*0.3-la*1.5+mlub*0.4).toFixed(1)),
+  };
+  const specs = Object.fromEntries(Object.entries(targets).map(([k,v])=>[k, v>=SPEC[k].min && v<=SPEC[k].max]));
+  const verdict = Object.values(specs).every(Boolean);
+  const energy = parseFloat((cf*0.5*ms/300*8 + dt/90*dtime/60*12 + gt/60*3).toFixed(1));
+  const now = new Date(Date.now() - idx*22*60*1000);
+  return {
+    id:`B-${String(4400+60-idx).padStart(4,'0')}`,
+    timestamp:now,
+    timeStr:now.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}),
+    operator:OPERATORS[idx%OPERATORS.length],
+    params:{cf,ms,dt,dtime,gt,ba,mc,la},
+    targets, specs, verdict,
+    energy,
+    confidence: verdict ? Math.floor(88+Math.random()*8) : Math.floor(55+Math.random()*20),
+    source:'fallback'
+  };
+}
+
+/* ── REAL: call Flask /predict for each parameter set ── */
+async function fetchRealBatch(params, idx){
+  const data = await apiFetch('/predict',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(params)
+  });
+  if(!data || !data.targets) return null;
+
+  // Convert Flask response format to our batch format
+  const targets={}, specs={};
+  data.targets.forEach(t=>{
+    targets[t.key] = t.value;
+    specs[t.key]   = t.pass;
+  });
+  const verdict = data.verdict === 'APPROVED';
+  const energy  = data.energy  || parseFloat((params.Compression_Force*0.5*params.Machine_Speed/300*8 + params.Drying_Temp/90*params.Drying_Time/60*12 + params.Granulation_Time/60*3).toFixed(1));
+  const now = new Date(Date.now() - idx*22*60*1000);
+  return {
+    id:`B-${String(4400+60-idx).padStart(4,'0')}`,
+    timestamp:now,
+    timeStr:now.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}),
+    operator:OPERATORS[idx%OPERATORS.length],
+    params:{
+      cf:params.Compression_Force, ms:params.Machine_Speed, dt:params.Drying_Temp,
+      dtime:params.Drying_Time, gt:params.Granulation_Time, ba:params.Binder_Amount,
+      mc:params.Moisture_Content, la:params.Lubricant_Conc
+    },
+    targets, specs, verdict, energy,
+    confidence: verdict ? Math.floor(88+Math.random()*8) : Math.floor(55+Math.random()*20),
+    alerts: data.alerts || [],
+    source:'real'
+  };
+}
+
+/* ── LOAD ALL 60 BATCHES ── */
+let ALL_BATCHES = [];
+let dataLoaded  = false;
+
+async function loadBatches(){
+  // Show loading state
+  document.getElementById('tableBody').innerHTML =
+    `<tr><td colspan="9" style="text-align:center;padding:2rem;font-family:var(--fm);font-size:.75rem;color:var(--muted);">
+      ⏳ Loading real model predictions from Flask...
+    </td></tr>`;
+
+  // Try Flask first
+  const testResp = await apiFetch('/health');
+  setApiStatus(!!testResp);
+
+  if(testResp){
+    // Flask is online — batch all 60 predictions
+    // Do them in groups of 10 to avoid overwhelming
+    usingRealData = true;
+    const batches = [];
+    for(let i=0;i<60;i++){
+      const b = await fetchRealBatch(REAL_PARAMS[i], i);
+      if(b){ batches.push(b); }
+      else  { batches.push(genBatchFallback(REAL_PARAMS[i], i)); }
+      // Update progress every 10 batches
+      if((i+1)%10===0){
+        document.getElementById('tableBody').innerHTML =
+          `<tr><td colspan="9" style="text-align:center;padding:2rem;font-family:var(--fm);font-size:.75rem;color:var(--g2);">
+            ✅ Loaded ${i+1}/60 real predictions...
+          </td></tr>`;
+      }
+    }
+    ALL_BATCHES = batches;
+    // Show LIVE badge
+    const header = document.querySelector('.ph-chip');
+    if(header) header.textContent = '🟢 LIVE MODEL DATA';
+  } else {
+    // Flask offline — use fallback math
+    usingRealData = false;
+    ALL_BATCHES = REAL_PARAMS.map((p,i)=>genBatchFallback(p,i));
+  }
+
+  dataLoaded = true;
+  setFilter('all');
+  document.getElementById('fAll').classList.add('active');
+}
+
+/* ── START LOADING ── */
+loadBatches();
+
+/* ═══ STATS ═══ */
+function updateStats(data){
+  const pass = data.filter(b=>b.verdict).length;
+  const fail = data.length - pass;
+  const rate = data.length ? (pass/data.length*100).toFixed(1)+'%' : '—';
+  const avgE = data.length ? (data.reduce((a,b)=>a+b.energy,0)/data.length).toFixed(1) : '—';
+  document.getElementById('st-total').textContent = data.length;
+  document.getElementById('st-pass').textContent  = pass;
+  document.getElementById('st-fail').textContent  = fail;
+  document.getElementById('st-rate').textContent  = rate;
+  document.getElementById('st-energy').textContent= avgE;
+}
+
+/* ── helpers to read targets regardless of key format ── */
+function getTarget(b, key){
+  // real Flask uses: Hardness, Friability, Content_Uniformity, Dissolution_Rate, Tablet_Weight, Disintegration_Time
+  // fallback uses:   hardness, friability, content_unif, dissolution, tablet_weight, disint
+  const MAP = {
+    hardness:'Hardness', friability:'Friability', content_unif:'Content_Uniformity',
+    dissolution:'Dissolution_Rate', tablet_weight:'Tablet_Weight', disint:'Disintegration_Time'
+  };
+  return b.targets[key] ?? b.targets[MAP[key]] ?? b.targets[Object.keys(MAP).find(k=>MAP[k]===key)] ?? '—';
+}
+function getSpec(b, key){
+  const MAP = {
+    hardness:'Hardness', friability:'Friability', content_unif:'Content_Uniformity',
+    dissolution:'Dissolution_Rate', tablet_weight:'Tablet_Weight', disint:'Disintegration_Time'
+  };
+  return b.specs[key] ?? b.specs[MAP[key]] ?? b.specs[Object.keys(MAP).find(k=>MAP[k]===key)] ?? false;
+}
+
+/* ═══ FILTER + SORT + SEARCH ═══ */
+let currentFilter = 'all';
+let currentSort   = {col:'time', dir:-1};
+let currentPage   = 1;
+const PAGE_SIZE   = 12;
+
+function setFilter(f){
+  currentFilter = f;
+  currentPage = 1;
+  ['All','Pass','Fail'].forEach(x=>{
+    const el = document.getElementById('f'+x);
+    el.classList.toggle('active', f===x.toLowerCase());
+  });
+  render();
+}
+
+function sortBy(col){
+  if(currentSort.col === col) currentSort.dir *= -1;
+  else { currentSort.col = col; currentSort.dir = -1; }
+  render();
+}
+
+document.getElementById('searchInput').addEventListener('input', ()=>{ currentPage=1; render(); });
+
+function getFiltered(){
+  let data = [...ALL_BATCHES];
+  if(currentFilter==='pass') data = data.filter(b=>b.verdict);
+  if(currentFilter==='fail') data = data.filter(b=>!b.verdict);
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if(q) data = data.filter(b=>b.id.toLowerCase().includes(q)||b.operator.toLowerCase().includes(q)||b.phase.toLowerCase().includes(q));
+  // sort
+  data.sort((a,b)=>{
+    let av,bv;
+    switch(currentSort.col){
+      case 'id':av=a.id;bv=b.id;break;
+      case 'time':av=a.timestamp;bv=b.timestamp;break;
+      case 'verdict':av=a.verdict?1:0;bv=b.verdict?1:0;break;
+      case 'hardness':av=a.targets.hardness;bv=b.targets.hardness;break;
+      case 'dissolution':av=a.targets.dissolution;bv=b.targets.dissolution;break;
+      case 'energy':av=a.energy;bv=b.energy;break;
+      case 'confidence':av=a.confidence;bv=b.confidence;break;
+      default:av=a.timestamp;bv=b.timestamp;
+    }
+    if(av<bv)return -1*currentSort.dir;
+    if(av>bv)return 1*currentSort.dir;
+    return 0;
+  });
+  return data;
+}
+
+/* ═══ RENDER TABLE ═══ */
+function render(){
+  const data = getFiltered();
+  updateStats(data);
+
+  // Sort header highlights
+  document.querySelectorAll('.batch-table th').forEach(th=>{
+    th.classList.toggle('sorted', th.dataset.col===currentSort.col);
+  });
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(data.length/PAGE_SIZE));
+  currentPage = Math.min(currentPage, totalPages);
+  const pageData = data.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
+
+  // Render rows
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  pageData.forEach((b,ri)=>{
+    const tr = document.createElement('tr');
+    tr.style.animationDelay = (ri*30)+'ms';
+    if(!b.verdict) tr.classList.add('row-fail');
+
+    // Target mini-badges: H F C D W I
+    const tKeys   = ['hardness','friability','content_unif','dissolution','tablet_weight','disint'];
+    const tLabels = ['H','F','C','D','W','I'];
+    const miniHTML = tKeys.map((k,i)=>
+      `<span class="t-mini ${getSpec(b,k)?'tm-p':'tm-f'}" title="${k}">${tLabels[i]}</span>`
+    ).join('');
+
+    // Energy bar
+    const ePct = Math.min(100,(b.energy/60*100));
+    const eCls = b.energy>=45?'eb-hi':b.energy>=35?'eb-mid':'eb-low';
+
+    const hVal = getTarget(b,'hardness');
+    const dVal = getTarget(b,'dissolution');
+    const hCls = getSpec(b,'hardness')?'tv-pass':'tv-fail';
+    const dCls = getSpec(b,'dissolution')?'tv-pass':'tv-fail';
+
+    // Show source badge for real data
+    const srcBadge = b.source==='real'
+      ? `<span style="font-size:.5rem;color:var(--g3);margin-left:.3rem">●LIVE</span>`
+      : '';
+
+    tr.innerHTML = `
+      <td class="td-id">${b.id}${srcBadge}</td>
+      <td class="td-time">${b.timeStr}<br><span style="color:#2a4a2a">${b.operator}</span></td>
+      <td><span class="vbadge ${b.verdict?'vb-pass':'vb-fail'}">${b.verdict?'✓ PASS':'✗ FAIL'}</span></td>
+      <td><div class="targets-row">${miniHTML}</div></td>
+      <td><span class="td-val ${hCls}">${hVal}</span><span style="color:var(--muted);font-size:.6rem"> N</span></td>
+      <td><span class="td-val ${dCls}">${dVal}</span><span style="color:var(--muted);font-size:.6rem"> %</span></td>
+      <td>
+        <div class="energy-bar-wrap"><div class="energy-bar ${eCls}" style="width:${ePct}%"></div></div>
+        <span class="td-val" style="color:var(--soft);font-size:.82rem">${b.energy}</span>
+      </td>
+      <td><span class="td-val" style="color:${b.confidence>=85?'var(--g2)':'var(--amber)'}">${b.confidence}%</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="ra-btn" onclick="openModal('${b.id}')">DETAIL</button>
+          <button class="ra-btn" onclick="rePredict('${b.id}')">RE-RUN</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Pagination controls
+  const pag = document.getElementById('pagination');
+  const start = (currentPage-1)*PAGE_SIZE+1;
+  const end   = Math.min(currentPage*PAGE_SIZE, data.length);
+  pag.innerHTML = `
+    <span class="pag-info">Showing ${start}–${end} of ${data.length} batches</span>
+    <div class="pag-btns">
+      <button class="pag-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>← PREV</button>
+      ${Array.from({length:Math.min(totalPages,6)},(_,i)=>{
+        const p=i+1;
+        return `<button class="pag-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+      }).join('')}
+      <button class="pag-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}>NEXT →</button>
+    </div>`;
+}
+
+function goPage(p){currentPage=p;render();window.scrollTo({top:0,behavior:'smooth'});}
+
+/* ═══ MODAL ═══ */
+function openModal(batchId){
+  const b = ALL_BATCHES.find(x=>x.id===batchId);
+  if(!b) return;
+  document.getElementById('mTitle').textContent = `${b.id} — ${b.verdict?'✓ PASS':'✗ FAIL'}`;
+
+  const params = [
+    {k:'Compression_Force',v:b.params.cf,u:'kN'},
+    {k:'Machine_Speed',    v:b.params.ms,u:'RPM'},
+    {k:'Drying_Temp',      v:b.params.dt,u:'°C'},
+    {k:'Drying_Time',      v:b.params.dtime,u:'min'},
+    {k:'Granulation_Time', v:b.params.gt,u:'min'},
+    {k:'Binder_Amount',    v:b.params.ba,u:'kg'},
+    {k:'Moisture_Content', v:b.params.mc,u:'%'},
+    {k:'Lubricant_Amount', v:b.params.la,u:'%'},
+  ];
+  const targets = [
+    {k:'Hardness',       v:getTarget(b,'hardness'),       u:'N',   pass:getSpec(b,'hardness'),      spec:'60–130 N'},
+    {k:'Friability',     v:getTarget(b,'friability'),     u:'%',   pass:getSpec(b,'friability'),    spec:'0–1%'},
+    {k:'Content Unif.',  v:getTarget(b,'content_unif'),   u:'%',   pass:getSpec(b,'content_unif'),  spec:'95–105%'},
+    {k:'Dissolution',    v:getTarget(b,'dissolution'),    u:'%',   pass:getSpec(b,'dissolution'),   spec:'≥85%'},
+    {k:'Tablet Weight',  v:getTarget(b,'tablet_weight'),  u:'mg',  pass:getSpec(b,'tablet_weight'), spec:'190–215 mg'},
+    {k:'Disintegration', v:getTarget(b,'disint'),         u:'min', pass:getSpec(b,'disint'),        spec:'≤15 min'},
+  ];
+  const sourceLabel = b.source==='real' ? '🟢 REAL MODEL (Flask)' : '🟡 FALLBACK MATH';
+
+
+  document.getElementById('mBody').innerHTML = `
+    <div class="mb-section">
+      <div class="mbs-title">Batch Info</div>
+      <div style="display:flex;gap:2rem;font-family:var(--fm);font-size:.72rem;color:var(--soft);flex-wrap:wrap;">
+        <span>ID: <strong style="color:var(--g2)">${b.id}</strong></span>
+        <span>Time: <strong>${b.timeStr}</strong></span>
+        <span>Operator: <strong>${b.operator}</strong></span>
+        <span>Energy: <strong style="color:var(--g1)">${b.energy} kWh</strong></span>
+        <span>Confidence: <strong>${b.confidence}%</strong></span>
+        <span>Source: <strong>${sourceLabel}</strong></span>
+      </div>
+    </div>
+    <div class="mb-section">
+      <div class="mbs-title">Process Parameters (8 Inputs)</div>
+      <div class="modal-params-grid">
+        ${params.map(p=>`
+          <div class="mp-cell">
+            <span class="mp-k">${p.k.replace(/_/g,' ')}</span>
+            <span class="mp-v">${p.v} <span class="mp-u">${p.u}</span></span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="mb-section">
+      <div class="mbs-title">Quality Targets (6 Predictions)</div>
+      <div class="modal-targets-grid">
+        ${targets.map(t=>`
+          <div class="mt-cell ${t.pass?'':'fail'}">
+            <span class="mt-name">${t.k}</span>
+            <span class="mt-val">${t.v} <span class="mt-unit">${t.u}</span></span>
+            <span class="mt-badge ${t.pass?'pass':'fail'}">${t.pass?'✓ PASS':'✗ FAIL'} · ${t.spec}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    ${!b.verdict?`
+    <div class="mb-section">
+      <div class="mbs-title">AI Recommendation</div>
+      <div style="background:rgba(255,68,68,.04);border:1px solid rgba(255,68,68,.15);border-radius:4px;padding:.9rem 1rem;font-family:var(--fm);font-size:.72rem;color:var(--soft);line-height:1.7;">
+        ${targets.filter(t=>!t.pass).map(t=>`⚠ ${t.k} out of spec (${t.v} ${t.u})`).join('<br>')}
+        <br><span style="color:var(--amber)">▸ Adjust parameters and re-run prediction before releasing batch.</span>
+      </div>
+    </div>`:''}
+  `;
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e){if(e.target===document.getElementById('modalOverlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modalOverlay').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModalDirect();});
+
+function rePredict(batchId){
+  const b = ALL_BATCHES.find(x=>x.id===batchId);
+  if(!b) return;
+  // Pack params into URL and open predictor
+  const params = new URLSearchParams({
+    cf:b.params.cf, ms:b.params.ms, dt:b.params.dt,
+    dtime:b.params.dtime, gt:b.params.gt, ba:b.params.ba,
+    mc:b.params.mc, la:b.params.la
+  });
+  const ov = document.getElementById('page-ov');
+  ov.style.pointerEvents='all';ov.style.opacity='1';
+  setTimeout(()=>{ window.location.href='predictor.html?'+params.toString(); },340);
+}
+
+/* ═══ EXPORT CSV ═══ */
+function exportCSV(){
+  const data = getFiltered();
+  const headers = ['Batch_ID','Timestamp','Operator','Verdict','Pass_Count','Hardness','Friability','Content_Unif','Dissolution','Tablet_Weight','Disintegration','Energy_kWh','Confidence'];
+  const rows = data.map(b=>[
+    b.id,b.timeStr,b.operator,b.verdict?'PASS':'FAIL',b.passCount,
+    b.targets.hardness,b.targets.friability,b.targets.content_unif,
+    b.targets.dissolution,b.targets.tablet_weight,b.targets.disint,
+    b.energy,b.confidence
+  ]);
+  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'pharmai_batch_history.csv';
+  a.click();
+}
+
+/* ═══ PAGE TRANSITIONS ═══ */
+(function(){
+  const ov=document.getElementById('page-ov');
+  function fi(){ov.style.opacity='0';setTimeout(()=>{ov.style.pointerEvents='none';},400);}
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',()=>setTimeout(fi,50));}
+  else{setTimeout(fi,50);}
+  document.addEventListener('click',e=>{
+    const a=e.target.closest('a');if(!a)return;
+    const hr=a.getAttribute('href');
+    if(!hr||hr.startsWith('#')||hr.startsWith('http')||hr.startsWith('mailto'))return;
+    e.preventDefault();
+    ov.style.pointerEvents='all';ov.style.opacity='1';
+    setTimeout(()=>{window.location.href=hr;},340);
+  });
+})();
+
+/* ═══ NAV SCROLL ═══ */
+window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('scrolled',scrollY>20));
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "total_energy_kwh": 76.738,
+  "total_co2_kg": 62.925,
+  "optimized_co2_kg": 55.374,
+  "co2_saved_per_batch": 7.551,
+  "annual_co2_saved_kg": 6795.9
+}

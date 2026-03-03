@@ -1,0 +1,58 @@
+{
+  "Preparation": {
+    "risk_score": 0.8,
+    "risk_level": "LOW \u2014 Normal",
+    "anomaly_pct": 0.0,
+    "avg_vibration": 0.094,
+    "power_std": 0.57
+  },
+  "Granulation": {
+    "risk_score": 23.0,
+    "risk_level": "LOW \u2014 Normal",
+    "anomaly_pct": 6.7,
+    "avg_vibration": 2.539,
+    "power_std": 1.04
+  },
+  "Drying": {
+    "risk_score": 40.7,
+    "risk_level": "MEDIUM \u2014 Monitor",
+    "anomaly_pct": 16.0,
+    "avg_vibration": 1.825,
+    "power_std": 3.08
+  },
+  "Milling": {
+    "risk_score": 72.2,
+    "risk_level": "HIGH \u2014 Schedule Inspection",
+    "anomaly_pct": 33.3,
+    "avg_vibration": 8.066,
+    "power_std": 5.24
+  },
+  "Blending": {
+    "risk_score": 12.7,
+    "risk_level": "LOW \u2014 Normal",
+    "anomaly_pct": 0.0,
+    "avg_vibration": 3.172,
+    "power_std": 2.15
+  },
+  "Compression": {
+    "risk_score": 23.6,
+    "risk_level": "LOW \u2014 Normal",
+    "anomaly_pct": 0.0,
+    "avg_vibration": 5.344,
+    "power_std": 6.55
+  },
+  "Coating": {
+    "risk_score": 9.9,
+    "risk_level": "LOW \u2014 Normal",
+    "anomaly_pct": 0.0,
+    "avg_vibration": 2.057,
+    "power_std": 3.64
+  },
+  "Quality_Testing": {
+    "risk_score": 2.4,
+    "risk_level": "LOW \u2014 Normal",
+    "anomaly_pct": 0.0,
+    "avg_vibration": 0.49,
+    "power_std": 0.91
+  }
+}

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.DS_Store
+ai_env/
+myenv/
+venv/
+*.env
+.ipynb_checkpoints/
+*.ipynb
+ML/
+*.xlsx
+*.csv
+node_modules/

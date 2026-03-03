@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmAI — Batch Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:    #000000;
+  --bg1:   #050a05;
+  --bg2:   #080f08;
+  --card:  #0a120a;
+  --card2: #0d160d;
+  --g1:    #00e640;
+  --g2:    #00b332;
+  --g3:    #008023;
+  --g4:    #004011;
+  --g5:    #001405;
+  --bdr:   rgba(0,230,64,.12);
+  --bdrh:  rgba(0,230,64,.35);
+  --red:   #ff4444;
+  --redb:  rgba(255,68,68,.1);
+  --redbr: rgba(255,68,68,.25);
+  --amber: #ffc400;
+  --text:  #e8ffe8;
+  --soft:  #a0c8a0;
+  --muted: #4a6e4a;
+  --fh:    'Rajdhani', sans-serif;
+  --fb:    'Inter', sans-serif;
+  --fm:    'JetBrains Mono', monospace;
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--fb);
+  overflow-x:hidden;
+  min-height:100vh;
+}
+
+/* scanlines */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,230,64,.012) 2px,rgba(0,230,64,.012) 4px);
+  pointer-events:none;
+}
+/* grid */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,230,64,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,230,64,.035) 1px,transparent 1px);
+  background-size:50px 50px;
+  pointer-events:none;
+  animation:gpulse 8s ease-in-out infinite alternate;
+}
+@keyframes gpulse{from{opacity:.5;}to{opacity:.9;}}
+
+/* blobs */
+.gb{position:fixed;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:0;}
+.gb1{width:600px;height:600px;background:radial-gradient(var(--g3),transparent 65%);top:-200px;left:-150px;opacity:.08;animation:gbm 20s ease-in-out infinite alternate;}
+.gb2{width:400px;height:400px;background:radial-gradient(var(--g2),transparent 65%);bottom:-150px;right:-100px;opacity:.06;animation:gbm 16s ease-in-out infinite alternate-reverse;}
+@keyframes gbm{from{transform:translate(0,0)scale(1);}to{transform:translate(50px,30px)scale(1.12);}}
+
+#mc{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:.045;pointer-events:none;}
+
+/* ═══ NAV ═══ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:300;
+  height:62px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 3rem;
+  background:rgba(0,0,0,.88);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bdr);
+  transition:border-color .3s,box-shadow .3s;
+}
+nav.scrolled{border-color:rgba(0,230,64,.2);box-shadow:0 0 28px rgba(0,230,64,.07);}
+.logo{font-family:var(--fh);font-size:1.7rem;font-weight:700;text-decoration:none;color:var(--text);letter-spacing:.06em;}
+.logo em{font-style:normal;color:var(--g1);text-shadow:0 0 18px rgba(0,230,64,.5);}
+.nav-links{display:flex;gap:2.2rem;align-items:center;}
+.nav-links a{font-family:var(--fm);color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:500;letter-spacing:.06em;transition:color .2s,text-shadow .2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--g1);text-shadow:0 0 12px rgba(0,230,64,.4);}
+.nav-cta{font-family:var(--fm);background:transparent;border:1px solid var(--g2);color:var(--g1)!important;padding:.45rem 1.3rem;border-radius:4px;font-size:.78rem!important;letter-spacing:.08em;transition:background .2s,box-shadow .2s,transform .2s!important;text-shadow:0 0 12px rgba(0,230,64,.3)!important;}
+.nav-cta:hover{background:rgba(0,230,64,.08)!important;box-shadow:0 0 18px rgba(0,230,64,.25),inset 0 0 18px rgba(0,230,64,.08)!important;transform:translateY(-1px)!important;}
+
+/* ═══ PAGE HEADER ═══ */
+.page-header{
+  position:relative;z-index:1;
+  padding:7rem 3rem 3rem;
+  max-width:1400px;margin:0 auto;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:2rem;
+  animation:fadeUp .7s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+
+.ph-left .page-chip{
+  display:inline-flex;align-items:center;gap:.5rem;
+  font-family:var(--fm);font-size:.68rem;font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--g3);border:1px solid var(--bdr);
+  padding:.3rem .9rem;border-radius:2px;margin-bottom:1rem;
+}
+.page-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--g1);box-shadow:0 0 8px var(--g1);animation:blink 2s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+.ph-left h1{
+  font-family:var(--fh);font-size:clamp(2.2rem,4vw,3.5rem);
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em;line-height:1;
+}
+.ph-left h1 span{color:var(--g1);text-shadow:0 0 28px rgba(0,230,64,.4);}
+.ph-left p{color:var(--soft);font-size:.92rem;margin-top:.8rem;max-width:500px;line-height:1.65;}
+
+.ph-status{
+  display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;
+  flex-shrink:0;
+}
+.status-pill{
+  display:flex;align-items:center;gap:.5rem;
+  font-family:var(--fm);font-size:.72rem;color:var(--muted);
+  background:var(--card);border:1px solid var(--bdr);
+  padding:.4rem .9rem;border-radius:2px;
+}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--g2);}
+.status-dot.live{animation:live-pulse 2s ease infinite;}
+@keyframes live-pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,64,.5);}50%{box-shadow:0 0 0 6px rgba(0,230,64,0);}}
+.api-badge{font-family:var(--fm);font-size:.65rem;padding:.3rem .8rem;border-radius:2px;border:1px solid;letter-spacing:.06em;text-transform:uppercase;}
+.ab-mock{color:var(--amber);border-color:rgba(255,196,0,.3);background:rgba(255,196,0,.06);}
+.ab-live{color:var(--g2);border-color:rgba(0,230,64,.3);background:rgba(0,230,64,.06);}
+
+/* ═══ MAIN LAYOUT ═══ */
+.main{
+  position:relative;z-index:1;
+  max-width:1400px;margin:0 auto;
+  padding:0 3rem 5rem;
+  display:grid;
+  grid-template-columns:420px 1fr;
+  gap:2rem;
+  align-items:start;
+}
+
+/* ═══ INPUT PANEL ═══ */
+.input-panel{
+  background:var(--card);
+  border:1px solid var(--bdr);
+  border-radius:6px;
+  overflow:hidden;
+  position:sticky;top:80px;
+  animation:fadeUp .7s ease .1s both;
+}
+
+.panel-header{
+  background:var(--bg);
+  border-bottom:1px solid var(--bdr);
+  padding:1.2rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-title{font-family:var(--fh);font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g1);text-shadow:0 0 10px rgba(0,230,64,.3);}
+.panel-sub{font-family:var(--fm);font-size:.64rem;color:var(--muted);letter-spacing:.06em;}
+
+.inputs-body{padding:1.4rem 1.5rem;}
+
+/* section divider inside panel */
+.inp-section-label{
+  font-family:var(--fm);font-size:.62rem;color:var(--g3);
+  letter-spacing:.14em;text-transform:uppercase;
+  border-bottom:1px solid var(--bdr);
+  padding-bottom:.5rem;margin-bottom:1rem;margin-top:1.4rem;
+}
+.inp-section-label:first-child{margin-top:0;}
+
+/* slider row */
+.slider-row{
+  margin-bottom:1.2rem;
+}
+.sr-top{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:.5rem;
+}
+.sr-label{font-family:var(--fm);font-size:.72rem;color:var(--soft);letter-spacing:.04em;}
+.sr-val-wrap{display:flex;align-items:baseline;gap:.25rem;}
+.sr-val{
+  font-family:var(--fh);font-size:1.2rem;font-weight:700;
+  color:var(--g1);text-shadow:0 0 10px rgba(0,230,64,.35);
+  min-width:2.5rem;text-align:right;
+  transition:color .2s;
+}
+.sr-unit{font-family:var(--fm);font-size:.65rem;color:var(--muted);}
+
+/* custom slider */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:4px;
+  background:linear-gradient(90deg,var(--g2) var(--pct,50%),rgba(0,230,64,.15) var(--pct,50%));
+  border-radius:2px;outline:none;cursor:pointer;
+  transition:background .1s;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--g1);
+  box-shadow:0 0 10px rgba(0,230,64,.6);
+  transition:transform .2s,box-shadow .2s;
+  cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb:hover{
+  transform:scale(1.3);
+  box-shadow:0 0 16px rgba(0,230,64,.8);
+}
+input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;border:none;
+  background:var(--g1);box-shadow:0 0 10px rgba(0,230,64,.6);cursor:pointer;
+}
+.sr-range{display:flex;justify-content:space-between;margin-top:.3rem;}
+.sr-min,.sr-max{font-family:var(--fm);font-size:.6rem;color:var(--muted);}
+
+/* predict button */
+.predict-btn{
+  width:100%;margin-top:1.6rem;
+  display:flex;align-items:center;justify-content:center;gap:.6rem;
+  background:transparent;border:1px solid var(--g2);
+  color:var(--g1);font-family:var(--fm);font-size:.84rem;
+  font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:1rem;border-radius:4px;cursor:pointer;
+  transition:background .2s,box-shadow .2s,transform .2s;
+  text-shadow:0 0 10px rgba(0,230,64,.35);
+  position:relative;overflow:hidden;
+}
+.predict-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(0,230,64,.08),transparent);
+  transform:translateX(-100%);
+  transition:transform .5s ease;
+}
+.predict-btn:hover::before{transform:translateX(100%);}
+.predict-btn:hover{
+  background:rgba(0,230,64,.07);
+  box-shadow:0 0 30px rgba(0,230,64,.2),inset 0 0 30px rgba(0,230,64,.04);
+  transform:translateY(-2px);
+}
+.predict-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+.reset-btn{
+  width:100%;margin-top:.7rem;
+  background:transparent;border:1px solid rgba(0,230,64,.1);
+  color:var(--muted);font-family:var(--fm);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  padding:.6rem;border-radius:4px;cursor:pointer;
+  transition:border-color .2s,color .2s;
+}
+.reset-btn:hover{border-color:var(--bdr);color:var(--soft);}
+
+/* ═══ RESULTS PANEL ═══ */
+.results-panel{
+  display:flex;flex-direction:column;gap:1.6rem;
+  animation:fadeUp .7s ease .2s both;
+}
+
+/* ── result top bar ── */
+.result-topbar{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:6px;padding:1.5rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;
+  transition:border-color .4s,box-shadow .4s;
+  min-height:82px;
+}
+.result-topbar.approved{border-color:rgba(0,230,64,.4);box-shadow:0 0 40px rgba(0,230,64,.1);}
+.result-topbar.flagged{border-color:rgba(255,68,68,.4);box-shadow:0 0 40px rgba(255,68,68,.1);}
+
+.rtb-left{display:flex;flex-direction:column;gap:.3rem;}
+.rtb-label{font-family:var(--fm);font-size:.68rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.rtb-verdict{
+  font-family:var(--fh);font-size:2rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;
+  transition:color .4s,text-shadow .4s;
+}
+.rtb-verdict.idle{color:var(--muted);}
+.rtb-verdict.approved{color:var(--g1);text-shadow:0 0 30px rgba(0,230,64,.5);}
+.rtb-verdict.flagged{color:var(--red);text-shadow:0 0 30px rgba(255,68,68,.5);}
+
+.rtb-right{display:flex;gap:1rem;align-items:center;}
+.rtb-stat{text-align:center;}
+.rtb-stat-n{font-family:var(--fh);font-size:1.5rem;font-weight:700;color:var(--g2);display:block;line-height:1;}
+.rtb-stat-l{font-family:var(--fm);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:.2rem;display:block;}
+.rtb-divider{width:1px;height:40px;background:var(--bdr);}
+
+/* processing animation */
+.processing-bar{
+  height:2px;background:var(--bdr);border-radius:1px;
+  margin-top:.6rem;overflow:hidden;
+  display:none;
+}
+.processing-bar.active{display:block;}
+.pb-inner{height:100%;background:linear-gradient(90deg,transparent,var(--g1),transparent);background-size:200% 100%;animation:scan 1.2s linear infinite;}
+@keyframes scan{0%{background-position:200% 0;}100%{background-position:-100% 0;}}
+
+/* ── 6-target grid ── */
+.targets-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;
+}
+
+.target-card{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:6px;padding:1.4rem 1.5rem;
+  position:relative;overflow:hidden;
+  transition:border-color .35s,transform .3s,box-shadow .3s;
+}
+.target-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--g3),transparent);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .5s ease;
+}
+.target-card.pass{border-color:rgba(0,230,64,.3);background:rgba(0,230,64,.03);}
+.target-card.pass::before{background:linear-gradient(90deg,transparent,var(--g2),transparent);transform:scaleX(1);}
+.target-card.fail{border-color:rgba(255,68,68,.3);background:rgba(255,68,68,.03);}
+.target-card.fail::before{background:linear-gradient(90deg,transparent,var(--red),transparent);transform:scaleX(1);}
+.target-card:hover{transform:translateY(-3px);}
+.target-card.pass:hover{box-shadow:0 8px 30px rgba(0,230,64,.1);}
+.target-card.fail:hover{box-shadow:0 8px 30px rgba(255,68,68,.1);}
+
+.tc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;}
+.tc-name{font-family:var(--fm);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.tc-badge{
+  font-family:var(--fm);font-size:.6rem;font-weight:700;
+  padding:.18rem .55rem;border-radius:2px;
+  transition:all .3s;
+}
+.tc-badge.pass{background:rgba(0,230,64,.12);color:var(--g1);border:1px solid rgba(0,230,64,.25);}
+.tc-badge.fail{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.2);}
+.tc-badge.idle{background:transparent;color:var(--muted);border:1px solid var(--bdr);}
+
+.tc-value{
+  font-family:var(--fh);font-size:2.2rem;font-weight:700;
+  color:var(--text);line-height:1;margin-bottom:.2rem;
+  transition:color .3s;
+}
+.target-card.pass .tc-value{color:var(--g1);text-shadow:0 0 20px rgba(0,230,64,.35);}
+.target-card.fail .tc-value{color:var(--red);text-shadow:0 0 20px rgba(255,68,68,.35);}
+.tc-unit{font-family:var(--fm);font-size:.7rem;color:var(--muted);}
+
+/* spec range bar */
+.tc-spec{margin-top:1rem;}
+.tc-spec-label{font-family:var(--fm);font-size:.6rem;color:var(--muted);letter-spacing:.06em;margin-bottom:.4rem;display:flex;justify-content:space-between;}
+.tc-bar-wrap{height:4px;background:rgba(0,230,64,.1);border-radius:2px;position:relative;overflow:visible;}
+.tc-bar-fill{
+  height:100%;border-radius:2px;
+  background:var(--g2);
+  transition:width .8s cubic-bezier(.22,1,.36,1);
+  position:relative;
+}
+.target-card.fail .tc-bar-fill{background:var(--red);}
+.tc-bar-marker{
+  position:absolute;top:-3px;
+  width:2px;height:10px;
+  background:rgba(0,230,64,.4);border-radius:1px;
+}
+
+/* card pop-in animation */
+.target-card{
+  opacity:0;transform:translateY(16px) scale(.97);
+}
+.target-card.revealed{
+  opacity:1;transform:none;
+  transition:opacity .4s ease,transform .4s ease,border-color .35s,box-shadow .3s;
+}
+
+/* ── SHAP / AI Alerts ── */
+.alerts-panel{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:6px;overflow:hidden;
+  transition:border-color .3s;
+}
+.alerts-panel:hover{border-color:rgba(0,230,64,.2);}
+
+.ap-header{
+  background:var(--bg);border-bottom:1px solid var(--bdr);
+  padding:1.1rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ap-title{font-family:var(--fh);font-size:.95rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g1);text-shadow:0 0 10px rgba(0,230,64,.3);}
+.ap-count{font-family:var(--fm);font-size:.68rem;color:var(--muted);letter-spacing:.06em;}
+
+.alerts-body{padding:1.3rem 1.5rem;display:flex;flex-direction:column;gap:.85rem;min-height:80px;}
+
+.alert-item{
+  display:flex;gap:1rem;align-items:flex-start;
+  padding:.9rem 1rem;border-radius:4px;border:1px solid;
+  opacity:0;transform:translateX(-12px);
+  transition:opacity .4s ease,transform .4s ease;
+}
+.alert-item.shown{opacity:1;transform:none;}
+.alert-critical{background:rgba(255,68,68,.05);border-color:rgba(255,68,68,.2);}
+.alert-warning{background:rgba(255,196,0,.05);border-color:rgba(255,196,0,.2);}
+.alert-info{background:rgba(0,230,64,.04);border-color:rgba(0,230,64,.15);}
+
+.alert-icon{font-size:1rem;flex-shrink:0;margin-top:.05rem;}
+.alert-content{flex:1;}
+.alert-type{
+  font-family:var(--fm);font-size:.62rem;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;display:block;
+}
+.alert-critical .alert-type{color:var(--red);}
+.alert-warning  .alert-type{color:var(--amber);}
+.alert-info     .alert-type{color:var(--g2);}
+.alert-msg{font-size:.82rem;color:var(--soft);line-height:1.55;}
+.alert-action{
+  margin-top:.5rem;
+  font-family:var(--fm);font-size:.72rem;
+  color:var(--g2);
+  display:flex;align-items:center;gap:.4rem;
+}
+.alert-action::before{content:'▸';}
+
+/* idle state */
+.alerts-idle{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:2.5rem;text-align:center;gap:.6rem;
+  color:var(--muted);
+}
+.alerts-idle-icon{font-size:2rem;opacity:.3;}
+.alerts-idle p{font-family:var(--fm);font-size:.75rem;letter-spacing:.06em;}
+
+/* ── Carbon / Energy mini panel ── */
+.carbon-panel{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:6px;overflow:hidden;
+}
+.carbon-body{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+}
+.carbon-cell{
+  padding:1.4rem 1.5rem;text-align:center;
+  border-right:1px solid var(--bdr);
+  transition:background .2s;
+}
+.carbon-cell:last-child{border-right:none;}
+.carbon-cell:hover{background:rgba(0,230,64,.03);}
+.cc-val{
+  font-family:var(--fh);font-size:1.8rem;font-weight:700;
+  color:var(--g1);text-shadow:0 0 16px rgba(0,230,64,.35);
+  display:block;line-height:1;margin-bottom:.3rem;
+  transition:color .4s;
+}
+.cc-lbl{font-family:var(--fm);font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+
+/* ── SHAP feature importance mini bar ── */
+.shap-panel{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:6px;overflow:hidden;
+}
+.shap-body{padding:1.4rem 1.5rem;}
+.shap-row{
+  display:flex;align-items:center;gap:.8rem;margin-bottom:.75rem;
+}
+.shap-row:last-child{margin-bottom:0;}
+.shap-feat{font-family:var(--fm);font-size:.68rem;color:var(--soft);min-width:150px;letter-spacing:.03em;}
+.shap-bar-wrap{flex:1;height:6px;background:rgba(0,230,64,.1);border-radius:3px;overflow:hidden;}
+.shap-bar{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--g3),var(--g1));
+  width:0;
+  transition:width 1s cubic-bezier(.22,1,.36,1);
+}
+.shap-val{font-family:var(--fh);font-size:.85rem;font-weight:700;color:var(--g2);min-width:40px;text-align:right;}
+
+/* idle placeholder */
+.panel-idle{
+  padding:2rem 1.5rem;
+  display:flex;align-items:center;gap:1rem;
+  color:var(--muted);font-family:var(--fm);font-size:.75rem;letter-spacing:.06em;
+}
+.panel-idle-icon{font-size:1.5rem;opacity:.25;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1100px){
+  .main{grid-template-columns:1fr;}
+  .input-panel{position:static;}
+  .targets-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:700px){
+  nav{padding:0 1.2rem;}
+  .main,.page-header{padding-left:1.2rem;padding-right:1.2rem;}
+  .targets-grid{grid-template-columns:1fr;}
+  .carbon-body{grid-template-columns:1fr;gap:0;}
+  .carbon-cell{border-right:none;border-bottom:1px solid var(--bdr);}
+}
+</style>
+</head>
+<body>
+
+<canvas id="mc"></canvas>
+<div class="gb gb1"></div>
+<div class="gb gb2"></div>
+
+<!-- ═══ NAV ═══ -->
+<nav id="nav">
+  <a href="index.html" class="logo">PHARM<em>AI</em></a>
+  <div class="nav-links">
+    <a href="dashboard.html">DASHBOARD</a>
+    <a href="predictor.html" class="active">PREDICTOR</a>
+    <a href="analytics.html">ANALYTICS</a>
+    <a href="history.html">HISTORY</a>
+    <a href="about.html">ABOUT</a>
+    <a href="index.html" class="nav-cta">← HOME</a>
+  </div>
+</nav>
+
+<!-- ═══ PAGE HEADER ═══ -->
+<div class="page-header">
+  <div class="ph-left">
+    <div class="page-chip">Batch Quality Predictor</div>
+    <h1>PREDICT <span>QUALITY</span><br>BEFORE IT'S MADE</h1>
+    <p>Set 8 process parameters using the sliders. The ensemble model predicts all 6 quality targets in real time and the Agentic AI generates corrective action alerts.</p>
+  </div>
+  <div class="ph-status">
+    <div class="status-pill"><span class="status-dot live"></span>MODEL LOADED</div>
+    <div class="status-pill"><span class="status-dot" style="background:var(--amber)"></span>AWAITING INPUT</div>
+    <span class="api-badge ab-mock" id="apiBadge">MOCK MODE</span>
+  </div>
+</div>
+
+<!-- ═══ MAIN LAYOUT ═══ -->
+<div class="main">
+
+  <!-- ── INPUT PANEL ── -->
+  <div class="input-panel">
+    <div class="panel-header">
+      <span class="panel-title">Process Parameters</span>
+      <span class="panel-sub">8 inputs · drag to adjust</span>
+    </div>
+    <div class="inputs-body">
+
+      <div class="inp-section-label">Compression Phase</div>
+
+      <div class="slider-row" data-param="compression_force">
+        <div class="sr-top">
+          <span class="sr-label">COMPRESSION_FORCE</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-cf">11.5</span><span class="sr-unit">kN</span></div>
+        </div>
+        <input type="range" id="s-cf" min="5" max="20" step="0.1" value="11.5">
+        <div class="sr-range"><span class="sr-min">5 kN</span><span class="sr-max">20 kN</span></div>
+      </div>
+
+      <div class="slider-row" data-param="machine_speed">
+        <div class="sr-top">
+          <span class="sr-label">MACHINE_SPEED</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-ms">170</span><span class="sr-unit">RPM</span></div>
+        </div>
+        <input type="range" id="s-ms" min="50" max="300" step="1" value="170">
+        <div class="sr-range"><span class="sr-min">50 RPM</span><span class="sr-max">300 RPM</span></div>
+      </div>
+
+      <div class="inp-section-label">Drying Phase</div>
+
+      <div class="slider-row" data-param="drying_temperature">
+        <div class="sr-top">
+          <span class="sr-label">DRYING_TEMPERATURE</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-dt">60</span><span class="sr-unit">°C</span></div>
+        </div>
+        <input type="range" id="s-dt" min="30" max="90" step="0.5" value="60">
+        <div class="sr-range"><span class="sr-min">30 °C</span><span class="sr-max">90 °C</span></div>
+      </div>
+
+      <div class="slider-row" data-param="drying_time">
+        <div class="sr-top">
+          <span class="sr-label">DRYING_TIME</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-dtime">28</span><span class="sr-unit">min</span></div>
+        </div>
+        <input type="range" id="s-dtime" min="10" max="60" step="1" value="28">
+        <div class="sr-range"><span class="sr-min">10 min</span><span class="sr-max">60 min</span></div>
+      </div>
+
+      <div class="inp-section-label">Granulation Phase</div>
+
+      <div class="slider-row" data-param="granulation_time">
+        <div class="sr-top">
+          <span class="sr-label">GRANULATION_TIME</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-gt">16</span><span class="sr-unit">min</span></div>
+        </div>
+        <input type="range" id="s-gt" min="5" max="30" step="0.5" value="16">
+        <div class="sr-range"><span class="sr-min">5 min</span><span class="sr-max">30 min</span></div>
+      </div>
+
+      <div class="slider-row" data-param="binder_amount">
+        <div class="sr-top">
+          <span class="sr-label">BINDER_AMOUNT</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-ba">9.0</span><span class="sr-unit">kg</span></div>
+        </div>
+        <input type="range" id="s-ba" min="3" max="15" step="0.1" value="9.0">
+        <div class="sr-range"><span class="sr-min">3 kg</span><span class="sr-max">15 kg</span></div>
+      </div>
+
+      <div class="inp-section-label">Environmental</div>
+
+      <div class="slider-row" data-param="moisture_content">
+        <div class="sr-top">
+          <span class="sr-label">MOISTURE_CONTENT</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-mc">2.5</span><span class="sr-unit">%</span></div>
+        </div>
+        <input type="range" id="s-mc" min="0.5" max="6" step="0.1" value="2.5">
+        <div class="sr-range"><span class="sr-min">0.5%</span><span class="sr-max">6%</span></div>
+      </div>
+
+      <div class="slider-row" data-param="lubricant_amount">
+        <div class="sr-top">
+          <span class="sr-label">LUBRICANT_AMOUNT</span>
+          <div class="sr-val-wrap"><span class="sr-val" id="v-la">1.2</span><span class="sr-unit">%</span></div>
+        </div>
+        <input type="range" id="s-la" min="0.2" max="3" step="0.1" value="1.2">
+        <div class="sr-range"><span class="sr-min">0.2%</span><span class="sr-max">3%</span></div>
+      </div>
+
+      <button class="predict-btn" id="predictBtn" onclick="runPrediction()">
+        ▶ &nbsp;RUN PREDICTION
+      </button>
+      <button class="reset-btn" onclick="resetAll()">RESET DEFAULTS</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS PANEL ── -->
+  <div class="results-panel">
+
+    <!-- Top verdict bar -->
+    <div class="result-topbar" id="topbar">
+      <div class="rtb-left">
+        <span class="rtb-label">Batch Verdict</span>
+        <div class="rtb-verdict idle" id="rtb-verdict">AWAITING INPUT</div>
+        <div class="processing-bar" id="procBar"><div class="pb-inner"></div></div>
+      </div>
+      <div class="rtb-right">
+        <div class="rtb-stat">
+          <span class="rtb-stat-n" id="passCount">—</span>
+          <span class="rtb-stat-l">Targets Pass</span>
+        </div>
+        <div class="rtb-divider"></div>
+        <div class="rtb-stat">
+          <span class="rtb-stat-n" id="failCount">—</span>
+          <span class="rtb-stat-l">Targets Fail</span>
+        </div>
+        <div class="rtb-divider"></div>
+        <div class="rtb-stat">
+          <span class="rtb-stat-n" id="confScore">—</span>
+          <span class="rtb-stat-l">Confidence</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 target cards -->
+    <div class="targets-grid" id="targetsGrid">
+
+      <div class="target-card" id="tc-hardness"
+           data-name="HARDNESS" data-unit="N"
+           data-spec-min="60" data-spec-max="130" data-spec-ideal="95"
+           data-pass-min="60" data-pass-max="130">
+        <div class="tc-header">
+          <span class="tc-name">HARDNESS</span>
+          <span class="tc-badge idle" id="badge-hardness">—</span>
+        </div>
+        <div class="tc-value" id="val-hardness">—</div>
+        <div class="tc-unit">Newton (N) &nbsp;·&nbsp; Spec: 60–130 N</div>
+        <div class="tc-spec">
+          <div class="tc-spec-label"><span>Spec Range</span><span id="pct-hardness">—</span></div>
+          <div class="tc-bar-wrap">
+            <div class="tc-bar-fill" id="bar-hardness" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="target-card" id="tc-friability"
+           data-name="FRIABILITY" data-unit="%"
+           data-spec-min="0" data-spec-max="1" data-spec-ideal="0.5"
+           data-pass-min="0" data-pass-max="1">
+        <div class="tc-header">
+          <span class="tc-name">FRIABILITY</span>
+          <span class="tc-badge idle" id="badge-friability">—</span>
+        </div>
+        <div class="tc-value" id="val-friability">—</div>
+        <div class="tc-unit">Percent (%) &nbsp;·&nbsp; Spec: 0–1%</div>
+        <div class="tc-spec">
+          <div class="tc-spec-label"><span>Spec Range</span><span id="pct-friability">—</span></div>
+          <div class="tc-bar-wrap">
+            <div class="tc-bar-fill" id="bar-friability" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="target-card" id="tc-content"
+           data-name="CONTENT_UNIF" data-unit="%"
+           data-spec-min="98" data-spec-max="102" data-spec-ideal="100"
+           data-pass-min="98" data-pass-max="102">
+        <div class="tc-header">
+          <span class="tc-name">CONTENT UNIF.</span>
+          <span class="tc-badge idle" id="badge-content">—</span>
+        </div>
+        <div class="tc-value" id="val-content">—</div>
+        <div class="tc-unit">Percent (%) &nbsp;·&nbsp; Spec: 98–102%</div>
+        <div class="tc-spec">
+          <div class="tc-spec-label"><span>Spec Range</span><span id="pct-content">—</span></div>
+          <div class="tc-bar-wrap">
+            <div class="tc-bar-fill" id="bar-content" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="target-card" id="tc-dissolution"
+           data-name="DISSOLUTION" data-unit="%"
+           data-spec-min="80" data-spec-max="100" data-spec-ideal="90"
+           data-pass-min="80" data-pass-max="100">
+        <div class="tc-header">
+          <span class="tc-name">DISSOLUTION RATE</span>
+          <span class="tc-badge idle" id="badge-dissolution">—</span>
+        </div>
+        <div class="tc-value" id="val-dissolution">—</div>
+        <div class="tc-unit">Percent (%) &nbsp;·&nbsp; Spec: ≥80%</div>
+        <div class="tc-spec">
+          <div class="tc-spec-label"><span>Spec Range</span><span id="pct-dissolution">—</span></div>
+          <div class="tc-bar-wrap">
+            <div class="tc-bar-fill" id="bar-dissolution" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="target-card" id="tc-weight"
+           data-name="TABLET_WEIGHT" data-unit="mg"
+           data-spec-min="195" data-spec-max="215" data-spec-ideal="205"
+           data-pass-min="195" data-pass-max="215">
+        <div class="tc-header">
+          <span class="tc-name">TABLET WEIGHT</span>
+          <span class="tc-badge idle" id="badge-weight">—</span>
+        </div>
+        <div class="tc-value" id="val-weight">—</div>
+        <div class="tc-unit">Milligrams (mg) &nbsp;·&nbsp; Spec: 195–215 mg</div>
+        <div class="tc-spec">
+          <div class="tc-spec-label"><span>Spec Range</span><span id="pct-weight">—</span></div>
+          <div class="tc-bar-wrap">
+            <div class="tc-bar-fill" id="bar-weight" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="target-card" id="tc-disintegration"
+           data-name="DISINTEGRATION" data-unit="min"
+           data-spec-min="0" data-spec-max="15" data-spec-ideal="8"
+           data-pass-min="0" data-pass-max="15">
+        <div class="tc-header">
+          <span class="tc-name">DISINTEGRATION</span>
+          <span class="tc-badge idle" id="badge-disintegration">—</span>
+        </div>
+        <div class="tc-value" id="val-disintegration">—</div>
+        <div class="tc-unit">Minutes (min) &nbsp;·&nbsp; Spec: ≤15 min</div>
+        <div class="tc-spec">
+          <div class="tc-spec-label"><span>Spec Range</span><span id="pct-disintegration">—</span></div>
+          <div class="tc-bar-wrap">
+            <div class="tc-bar-fill" id="bar-disintegration" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /targets-grid -->
+
+    <!-- Agentic AI Alerts -->
+    <div class="alerts-panel">
+      <div class="ap-header">
+        <span class="ap-title">▸ Agentic AI Diagnostics</span>
+        <span class="ap-count" id="alertCount">0 alerts</span>
+      </div>
+      <div class="alerts-body" id="alertsBody">
+        <div class="alerts-idle">
+          <span class="alerts-idle-icon">🧠</span>
+          <p>RUN PREDICTION TO GENERATE AI ALERTS</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carbon / Energy estimate -->
+    <div class="carbon-panel">
+      <div class="panel-header">
+        <span class="panel-title">Energy &amp; Carbon Estimate</span>
+        <span class="panel-sub">Based on current parameters</span>
+      </div>
+      <div class="carbon-body">
+        <div class="carbon-cell">
+          <span class="cc-val" id="cc-energy">—</span>
+          <span class="cc-lbl">Est. Energy (kWh)</span>
+        </div>
+        <div class="carbon-cell">
+          <span class="cc-val" id="cc-carbon">—</span>
+          <span class="cc-lbl">CO₂ Footprint (kg)</span>
+        </div>
+        <div class="carbon-cell">
+          <span class="cc-val" id="cc-efficiency">—</span>
+          <span class="cc-lbl">Energy Efficiency</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHAP Feature Importance -->
+    <div class="shap-panel">
+      <div class="panel-header">
+        <span class="panel-title">SHAP Feature Importance</span>
+        <span class="panel-sub">Top parameters by impact score</span>
+      </div>
+      <div id="shapBody">
+        <div class="panel-idle">
+          <span class="panel-idle-icon">📊</span>
+          RUN PREDICTION TO SEE SHAP VALUES
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /results-panel -->
+</div><!-- /main -->
+
+<script>
+  // Add this at the very top of your script
+const idMap = {
+  'Hardness': 'hardness',
+  'Friability': 'friability',
+  'Content_Uniformity': 'content',
+  'Dissolution_Rate': 'dissolution',
+  'Tablet_Weight': 'weight',
+  'Disintegration_Time': 'disintegration'
+};
+/* ═══════════════════════════════════
+   MATRIX RAIN
+═══════════════════════════════════ */
+(function(){
+  const c=document.getElementById('mc'), cx=c.getContext('2d');
+  let W,H,cols,drops;
+  const chars='PHARMAI01系統品質製造予測QUALITY YIELD PERFORMANCE ML LSTM XGB'.split('');
+  function init(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;cols=Math.floor(W/18);drops=Array(cols).fill(1).map(()=>Math.random()*-H/14);}
+  function draw(){
+    cx.fillStyle='rgba(0,0,0,.06)';cx.fillRect(0,0,W,H);
+    cx.font='13px JetBrains Mono,monospace';
+    drops.forEach((y,i)=>{
+      const ch=chars[Math.floor(Math.random()*chars.length)],b=Math.random();
+      cx.fillStyle=b>.95?`rgba(180,255,180,${b*.9})`:`rgba(0,${Math.floor(130+b*100)},${Math.floor(30+b*34)},${b*.75})`;
+      cx.fillText(ch,i*18,y*14);
+      if(y*14>H&&Math.random()>.975)drops[i]=0;
+      drops[i]+=.5+Math.random()*.3;
+    });
+  }
+  init();window.addEventListener('resize',init);setInterval(draw,45);
+})();
+
+/* ═══════════════════════════════════
+   SLIDER LOGIC
+═══════════════════════════════════ */
+const sliders = [
+  {id:'cf',  valId:'v-cf',  step:0.1,  dec:1},
+  {id:'ms',  valId:'v-ms',  step:1,    dec:0},
+  {id:'dt',  valId:'v-dt',  step:0.5,  dec:1},
+  {id:'dtime',valId:'v-dtime',step:1,  dec:0},
+  {id:'gt',  valId:'v-gt',  step:0.5,  dec:1},
+  {id:'ba',  valId:'v-ba',  step:0.1,  dec:1},
+  {id:'mc',  valId:'v-mc',  step:0.1,  dec:1},
+  {id:'la',  valId:'v-la',  step:0.1,  dec:1},
+];
+
+function updateSlider(s){
+  const el  = document.getElementById('s-'+s.id);
+  const val = document.getElementById(s.valId);
+  const v   = parseFloat(el.value);
+  val.textContent = v.toFixed(s.dec);
+  // update gradient fill
+  const pct = (v - el.min) / (el.max - el.min) * 100;
+  el.style.setProperty('--pct', pct+'%');
+  el.style.background = `linear-gradient(90deg,var(--g2) ${pct}%,rgba(0,230,64,.15) ${pct}%)`;
+}
+
+sliders.forEach(s=>{
+  const el = document.getElementById('s-'+s.id);
+  updateSlider(s);
+  el.addEventListener('input', ()=>updateSlider(s));
+});
+
+function getParams(){
+  return {
+    Compression_Force:   parseFloat(document.getElementById('s-cf').value),
+    Machine_Speed:       parseFloat(document.getElementById('s-ms').value),
+    Drying_Temperature:  parseFloat(document.getElementById('s-dt').value),
+    Drying_Time:         parseFloat(document.getElementById('s-dtime').value),
+    Granulation_Time:    parseFloat(document.getElementById('s-gt').value),
+    Binder_Amount:       parseFloat(document.getElementById('s-ba').value),
+    Moisture_Content:    parseFloat(document.getElementById('s-mc').value),
+    Lubricant_Amount:    parseFloat(document.getElementById('s-la').value),
+  };
+}
+
+function resetAll(){
+  const defaults={cf:11.5,ms:170,dt:60,dtime:28,gt:16,ba:9.0,mc:2.5,la:1.2};
+  Object.entries(defaults).forEach(([k,v])=>{
+    document.getElementById('s-'+k).value=v;
+  });
+  sliders.forEach(s=>updateSlider(s));
+}
+
+/* ═══════════════════════════════════
+   MOCK PREDICTION ENGINE
+   (reflects actual model behaviour)
+═══════════════════════════════════ */
+function mockPredict(p){
+  // Physics-based derived features (same as Cell 04 in notebook)
+  const drying_eff   = p.Drying_Temperature / (p.Drying_Time + 1);
+  const gran_int     = p.Binder_Amount / (p.Granulation_Time + 1);
+  const comp_int     = p.Compression_Force / (p.Machine_Speed + 1);
+  const moist_lub    = p.Moisture_Content / (p.Lubricant_Amount + 0.01);
+
+  // Simulate model outputs (heuristic approximations of ensemble behaviour)
+  const hardness      = 60 + (p.Compression_Force - 5) / 15 * 60
+                        + comp_int * 2.5 - p.Machine_Speed * 0.04
+                        + Math.random() * 4 - 2;
+
+  const friability    = Math.max(0.05,
+                        1.2 - (p.Compression_Force - 5) / 15 * 0.9
+                        + moist_lub * 0.05 + Math.random() * 0.08 - 0.04);
+
+  const content_unif  = 99.5 + (gran_int - 0.5) * 0.4
+                        - Math.abs(p.Moisture_Content - 2.5) * 0.3
+                        + Math.random() * 0.6 - 0.3;
+
+  const dissolution   = 70 + drying_eff * 1.8
+                        + (p.Binder_Amount - 5) * 0.5
+                        - moist_lub * 0.8
+                        + Math.random() * 3 - 1.5;
+
+  const tablet_weight = 200 + (p.Binder_Amount - 9) * 0.9
+                        + (p.Compression_Force - 11) * 0.5
+                        + Math.random() * 4 - 2;
+
+  const disintegration= 12 - drying_eff * 0.3
+                        - p.Lubricant_Amount * 1.5
+                        + moist_lub * 0.4
+                        + Math.random() * 1.5 - 0.75;
+
+  const specs = {
+    hardness:       {val: hardness,       min:60,   max:130,  pass: hardness>=60&&hardness<=130},
+    friability:     {val: friability,     min:0,    max:1,    pass: friability>=0&&friability<=1},
+    content:        {val: content_unif,   min:98,   max:102,  pass: content_unif>=98&&content_unif<=102},
+    dissolution:    {val: dissolution,    min:80,   max:100,  pass: dissolution>=80&&dissolution<=100},
+    weight:         {val: tablet_weight,  min:195,  max:215,  pass: tablet_weight>=195&&tablet_weight<=215},
+    disintegration: {val: disintegration, min:0,    max:15,   pass: disintegration>=0&&disintegration<=15},
+  };
+
+  // SHAP-style feature importance (simplified)
+  const shap = [
+    {feat:'Compression_Force', val: (p.Compression_Force/20 * 0.85).toFixed(3), pct: p.Compression_Force/20*85},
+    {feat:'Drying_Temperature',val: (drying_eff/6 * 0.72).toFixed(3),          pct: drying_eff/6*72},
+    {feat:'Binder_Amount',     val: (p.Binder_Amount/15 * 0.61).toFixed(3),    pct: p.Binder_Amount/15*61},
+    {feat:'Machine_Speed',     val: (p.Machine_Speed/300 * 0.48).toFixed(3),   pct: p.Machine_Speed/300*48},
+    {feat:'Moisture_Content',  val: (p.Moisture_Content/6 * 0.39).toFixed(3),  pct: p.Moisture_Content/6*39},
+    {feat:'Granulation_Time',  val: (p.Granulation_Time/30 * 0.32).toFixed(3), pct: p.Granulation_Time/30*32},
+  ].sort((a,b)=>b.pct-a.pct);
+
+  // Energy / Carbon estimate (Cell 19 logic)
+  const energy = (
+    p.Compression_Force * 0.5 * p.Machine_Speed/300 * 8
+    + p.Drying_Temperature/90 * p.Drying_Time/60 * 12
+    + p.Granulation_Time/60 * 3
+  ).toFixed(1);
+  const carbon     = (energy * 0.82).toFixed(2);
+  const efficiency = Math.min(99, Math.max(50, 100 - parseFloat(energy)/20*30)).toFixed(0) + '%';
+
+  return {specs, shap, energy, carbon, efficiency};
+}
+
+/* ═══════════════════════════════════
+   PREDICTION RUNNER
+═══════════════════════════════════ */
+let predRunning = false;
+
+async function runPrediction(){
+  if(predRunning) return;
+  predRunning = true;
+
+  const btn = document.getElementById('predictBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳  COMPUTING...';
+
+  // Show processing bar
+  document.getElementById('procBar').classList.add('active');
+  document.getElementById('rtb-verdict').className = 'rtb-verdict idle';
+  document.getElementById('rtb-verdict').textContent = 'COMPUTING...';
+  document.getElementById('topbar').className = 'result-topbar';
+
+  // Reset cards
+  document.querySelectorAll('.target-card').forEach(c=>{
+    c.className = 'target-card';
+  });
+  document.querySelectorAll('.tc-value').forEach(v=>v.textContent='—');
+  document.querySelectorAll('.tc-badge').forEach(b=>{b.className='tc-badge idle';b.textContent='—';});
+  document.querySelectorAll('.tc-bar-fill').forEach(b=>b.style.width='0%');
+  document.getElementById('alertsBody').innerHTML=`<div class="alerts-idle"><span class="alerts-idle-icon">⟳</span><p>RUNNING ENSEMBLE MODEL...</p></div>`;
+  document.getElementById('alertCount').textContent = '...';
+  resetCarbonShap();
+
+  const params = getParams();
+
+  // Try real FastAPI first, fallback to mock
+  let result = null;
+  try {
+    const resp = await Promise.race([
+      fetch('http://localhost:5000/predict', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(params)
+      }),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),2000))
+    ]);
+    if(resp.ok){
+      const data = await resp.json();
+      result = data;
+      document.getElementById('apiBadge').className = 'api-badge ab-live';
+      document.getElementById('apiBadge').textContent = 'FASTAPI LIVE';
+    }
+  } catch(e){ /* fallback to mock */ }
+
+  if(!result){
+    // Simulate processing delay
+    await new Promise(r=>setTimeout(r,900));
+    result = buildResultFromMock(mockPredict(params));
+    document.getElementById('apiBadge').className = 'api-badge ab-mock';
+    document.getElementById('apiBadge').textContent = 'MOCK MODE';
+  }
+
+  document.getElementById('procBar').classList.remove('active');
+  renderResults(result, params);
+
+  btn.disabled = false;
+  btn.textContent = '▶  RUN PREDICTION';
+  predRunning = false;
+}
+
+function buildResultFromMock(mock){
+  // Normalise mock output into same shape as Flask API would return
+  const targets = [];
+  const keys = ['hardness','friability','content','dissolution','weight','disintegration'];
+  keys.forEach(k=>{
+    const s = mock.specs[k];
+    targets.push({key:k, value:s.val, pass:s.pass, min:s.min, max:s.max});
+  });
+  return {
+    targets, shap:mock.shap,
+    energy:mock.energy, carbon:mock.carbon, efficiency:mock.efficiency
+  };
+}
+
+/* ═══════════════════════════════════
+   RENDER RESULTS
+═══════════════════════════════════ */
+function renderResults(result, params){
+  let passCount=0, failCount=0;
+
+  result.targets.forEach((t,i)=>{
+    setTimeout(()=>{
+      // Map Flask key names to HTML element IDs
+      const htmlId = idMap[t.key] || t.key.toLowerCase();
+      const card  = document.getElementById('tc-'    + htmlId);
+      const val   = document.getElementById('val-'   + htmlId);
+      const badge = document.getElementById('badge-' + htmlId);
+      const bar   = document.getElementById('bar-'   + htmlId);
+      const pct   = document.getElementById('pct-'   + htmlId);
+
+      if(!card) return; // safety guard
+
+      const v = parseFloat(t.value);
+
+      // Reveal card with pass/fail colour
+      card.className = 'target-card revealed ' + (t.pass ? 'pass' : 'fail');
+
+      // Display value — 2 decimals for Friability, 1 for rest
+      val.textContent = v.toFixed(t.key === 'Friability' || htmlId === 'friability' ? 2 : 1);
+
+      // Pass / fail badge
+      badge.textContent = t.pass ? '\u2713 PASS' : '\u2717 FAIL';
+      badge.className   = 'tc-badge ' + (t.pass ? 'pass' : 'fail');
+
+      // Spec bar fill
+      const range   = (t.max != null ? t.max : 100) - (t.min != null ? t.min : 0);
+      let   fillPct = range > 0 ? ((v - (t.min != null ? t.min : 0)) / range * 100) : 50;
+      fillPct = Math.max(2, Math.min(100, fillPct));
+      bar.style.width = fillPct + '%';
+
+      // Spec range label
+      const unitSuffix = (t.key === 'Tablet_Weight' || htmlId === 'weight')
+        ? ' mg' : (t.key === 'Hardness' || htmlId === 'hardness') ? ' N' : ' %';
+      if(pct) pct.textContent = v.toFixed(1) + unitSuffix;
+
+      if(t.pass) passCount++; else failCount++;
+
+      // After last card, render summary
+      if(i === result.targets.length - 1){
+        setTimeout(()=>renderSummary(passCount, failCount, result, params), 200);
+      }
+    }, i * 160);
+  });
+}
+
+function renderSummary(passCount, failCount, result, params){
+  const approved = failCount === 0;
+  const topbar   = document.getElementById('topbar');
+  const verdict  = document.getElementById('rtb-verdict');
+
+  topbar.className  = 'result-topbar '+(approved?'approved':'flagged');
+  verdict.className = 'rtb-verdict '+(approved?'approved':'flagged');
+  verdict.textContent = approved ? '✓  BATCH APPROVED' : '✗  BATCH FLAGGED';
+
+  document.getElementById('passCount').textContent = passCount+'/6';
+  document.getElementById('failCount').textContent = failCount+'/6';
+  document.getElementById('confScore').textContent = approved?'94%':'71%';
+
+  // Carbon / Energy
+  animateVal('cc-energy', result.energy);
+  animateVal('cc-carbon', result.carbon);
+  document.getElementById('cc-efficiency').textContent = result.efficiency;
+
+  // SHAP
+  renderShap(result.shap);
+
+  // Alerts
+  renderAlerts(failCount, result, params);
+}
+
+function animateVal(id, target){
+  const el = document.getElementById(id);
+  const tgt = parseFloat(target);
+  const dur = 800, t0 = performance.now();
+  (function tick(now){
+    const p = Math.min((now-t0)/dur,1), e=1-Math.pow(1-p,3);
+    el.textContent = (e*tgt).toFixed(tgt<10?2:1);
+    if(p<1) requestAnimationFrame(tick);
+  })(performance.now());
+}
+
+// function renderShap(shap){
+//   const body = document.getElementById('shapBody');
+//   body.innerHTML = '<div class="shap-body" id="shapRows"></div>';
+//   const rows = document.getElementById('shapRows');
+function renderShap(shap){
+  const body = document.getElementById('shapBody');
+  if(!shap || !Array.isArray(shap)) {
+    // If backend doesn't send SHAP, show a simple placeholder or skip
+    body.innerHTML = '<div class="panel-idle">Feature impact analysis complete.</div>';
+    return;
+  }
+  body.innerHTML = '<div class="shap-body" id="shapRows"></div>';
+  const rows = document.getElementById('shapRows');
+  shap.forEach((s,i)=>{
+    const row = document.createElement('div');
+    row.className = 'shap-row';
+    row.innerHTML = `<span class="shap-feat">${s.feat.replace('_',' ')}</span>
+      <div class="shap-bar-wrap"><div class="shap-bar" id="sb-${i}" style="width:0%"></div></div>
+      <span class="shap-val">+${s.val}</span>`;
+    rows.appendChild(row);
+    setTimeout(()=>{
+      document.getElementById('sb-'+i).style.width = Math.min(100,s.pct)+'%';
+    }, 200+i*100);
+  });
+}
+
+function renderAlerts(failCount, result, params){
+  const body   = document.getElementById('alertsBody');
+  const alerts = [];
+
+  // 1. Use real alerts from Flask API if available
+  if(result.alerts && result.alerts.length > 0){
+    result.alerts.forEach(a=>{
+      const icon = a.type==='critical'?'\ud83d\udea8':a.type==='warning'?'\u26a1':'\ud83e\udde0';
+      alerts.push({type:a.type||'info', icon, msg:a.message||a.msg||'', action:a.action||''});
+    });
+  } else {
+    // 2. Build from targets when mock mode (no Flask alerts)
+    const ACTIONS = {
+      Hardness:'Increase Compression_Force 10-15% or reduce Machine Speed.',
+      Friability:'Too brittle — increase Binder Amount or Granulation Time.',
+      Content_Uniformity:'Increase blending time or check Lubricant Concentration.',
+      Dissolution_Rate:'Reduce Drying Temp — over-drying detected.',
+      Tablet_Weight:'Calibrate die fill depth — check granule flow rate.',
+      Disintegration_Time:'Reduce Compression Force — check for over-compression.',
+      hardness:'Increase Compression_Force 10-15%.',
+      friability:'Increase Binder Amount or Granulation Time.',
+      content:'Check Lubricant Concentration.',
+      dissolution:'Reduce Drying Temp.',
+      weight:'Check die fill depth.',
+      disintegration:'Reduce Compression Force.',
+    };
+    result.targets.forEach(t=>{
+      if(!t.pass){
+        alerts.push({
+          type:'critical', icon:'\ud83d\udea8',
+          msg:`${(t.key||'').replace(/_/g,' ').toUpperCase()} = ${parseFloat(t.value).toFixed(2)} — outside spec.`,
+          action: ACTIONS[t.key] || 'Review process parameters.'
+        });
+      }
+    });
+  }
+
+  // 3. SHAP top feature
+  if(result.shap && result.shap.length > 0){
+    const top = result.shap[0];
+    alerts.push({type:'info', icon:'\ud83e\udde0',
+      msg:`SHAP: <strong>${top.feat.replace(/_/g,' ')}</strong> is top driver (impact: ${top.val}).`,
+      action:`Adjusting ${top.feat.replace(/_/g,' ')} will have the highest effect.`
+    });
+  }
+
+  // 4. Energy alert
+  const energy = parseFloat(result.energy);
+  if(!isNaN(energy)){
+    alerts.push(energy > 40
+      ? {type:'warning', icon:'\u26a1', msg:`Energy ${energy} kWh — above 40 kWh target.`, action:'Reduce Drying_Temperature or Drying_Time.'}
+      : {type:'info',    icon:'\ud83c\udf31', msg:`Energy ${energy} kWh — efficient range.`, action:`Carbon: ${result.carbon} kg CO\u2082.`}
+    );
+  }
+
+  // 5. Approval note
+  if(failCount === 0){
+    alerts.unshift({type:'info', icon:'\u2705',
+      msg:'All 6 targets in spec. Batch approved.',
+      action:'No corrective action required.'
+    });
+  }
+
+  document.getElementById('alertCount').textContent = alerts.length + ' alert' + (alerts.length !== 1 ? 's' : '');
+
+  body.innerHTML = '';
+  alerts.forEach((a, i)=>{
+    const div = document.createElement('div');
+    div.className = `alert-item alert-${a.type}`;
+    div.innerHTML = `
+      <span class="alert-icon">${a.icon}</span>
+      <div class="alert-content">
+        <span class="alert-type">${a.type.toUpperCase()}</span>
+        <div class="alert-msg">${a.msg}</div>
+        <div class="alert-action">${a.action}</div>
+      </div>`;
+    body.appendChild(div);
+    setTimeout(()=>div.classList.add('shown'), 100 + i * 120);
+  });
+}
+
+
+function resetCarbonShap(){
+  document.getElementById('cc-energy').textContent='—';
+  document.getElementById('cc-carbon').textContent='—';
+  document.getElementById('cc-efficiency').textContent='—';
+  document.getElementById('shapBody').innerHTML=`<div class="panel-idle"><span class="panel-idle-icon">📊</span>RUN PREDICTION TO SEE SHAP VALUES</div>`;
+  document.getElementById('passCount').textContent='—';
+  document.getElementById('failCount').textContent='—';
+  document.getElementById('confScore').textContent='—';
+}
+
+/* ═══════════════════════════════════
+   NAV SCROLL
+═══════════════════════════════════ */
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',scrollY>20);
+});
+</script>
+</body>
+</html>

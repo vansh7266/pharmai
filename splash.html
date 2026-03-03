@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmAI — Initializing</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;}
+
+/* scanlines */
+body::before{content:'';position:fixed;inset:0;z-index:1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,230,64,.015) 2px,rgba(0,230,64,.015) 4px);pointer-events:none;}
+
+/* matrix canvas */
+#mc{position:fixed;inset:0;z-index:0;opacity:.07;}
+
+/* grid */
+#grid{position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(0,230,64,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,230,64,.04) 1px,transparent 1px);
+  background-size:50px 50px;
+  animation:gpulse 4s ease-in-out infinite alternate;}
+@keyframes gpulse{from{opacity:.4;}to{opacity:1;}}
+
+/* center container */
+.splash{
+  position:relative;z-index:10;
+  width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+}
+
+/* logo */
+.sp-logo{
+  font-family:'Rajdhani',sans-serif;
+  font-size:clamp(4rem,12vw,9rem);
+  font-weight:700;letter-spacing:.08em;
+  color:#fff;
+  text-transform:uppercase;
+  line-height:1;
+  opacity:0;
+  transform:scale(.88);
+  transition:opacity .7s ease,transform .7s ease;
+}
+.sp-logo.show{opacity:1;transform:scale(1);}
+.sp-logo em{font-style:normal;color:#00e640;text-shadow:0 0 40px rgba(0,230,64,.7),0 0 80px rgba(0,230,64,.3);}
+
+/* tagline */
+.sp-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:clamp(.7rem,1.5vw,1rem);
+  color:#4a6e4a;letter-spacing:.25em;text-transform:uppercase;
+  margin-top:.6rem;
+  opacity:0;transition:opacity .6s ease .4s;
+}
+.sp-tag.show{opacity:1;}
+
+/* boot sequence box */
+.boot-box{
+  margin-top:3.5rem;
+  width:min(480px,88vw);
+  background:rgba(0,10,0,.8);
+  border:1px solid rgba(0,230,64,.15);
+  border-radius:4px;
+  overflow:hidden;
+  opacity:0;transition:opacity .5s ease .7s;
+}
+.boot-box.show{opacity:1;}
+.boot-topbar{
+  background:#000;border-bottom:1px solid rgba(0,230,64,.12);
+  padding:.45rem .9rem;display:flex;align-items:center;gap:.45rem;
+}
+.bt-dot{width:8px;height:8px;border-radius:50%;}
+.bd1{background:#ff5f57;}.bd2{background:#ffbd2e;}.bd3{background:#00e640;box-shadow:0 0 5px #00e640;}
+.boot-title{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:#4a6e4a;margin-left:auto;letter-spacing:.07em;}
+
+.boot-body{padding:.9rem 1rem 1rem;}
+.boot-line{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;line-height:1.9;
+  display:flex;align-items:center;gap:.7rem;
+  opacity:0;transform:translateX(-6px);
+  transition:opacity .3s ease,transform .3s ease;
+}
+.boot-line.show{opacity:1;transform:none;}
+.bl-ok{color:#00b332;flex-shrink:0;}
+.bl-load{color:#ffc400;flex-shrink:0;}
+.bl-txt{color:#a0c8a0;}
+.bl-dim{color:#4a6e4a;}
+
+/* progress bar */
+.progress-wrap{
+  margin-top:1.4rem;padding:0 1rem .6rem;
+  opacity:0;transition:opacity .4s ease .9s;
+}
+.progress-wrap.show{opacity:1;}
+.prog-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:#4a6e4a;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;display:flex;justify-content:space-between;}
+.prog-track{height:3px;background:rgba(0,230,64,.12);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,#008023,#00e640);border-radius:2px;transition:width .25s ease;box-shadow:0 0 8px rgba(0,230,64,.4);}
+
+/* entering text */
+.sp-enter{
+  margin-top:2.5rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.72rem;color:#00e640;letter-spacing:.2em;text-transform:uppercase;
+  opacity:0;transition:opacity .4s ease;
+  text-shadow:0 0 12px rgba(0,230,64,.5);
+  animation:blink-txt 1s step-end infinite;
+}
+.sp-enter.show{opacity:1;}
+@keyframes blink-txt{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* fade-out overlay for transition to index */
+#exit-ov{position:fixed;inset:0;z-index:9999;background:#000;opacity:0;pointer-events:none;transition:opacity .4s ease;}
+</style>
+</head>
+<body>
+<canvas id="mc"></canvas>
+<div id="grid"></div>
+<div id="exit-ov"></div>
+
+<div class="splash">
+  <div class="sp-logo" id="spLogo">PHARM<em>AI</em></div>
+  <div class="sp-tag" id="spTag">Intelligent Manufacturing System</div>
+
+  <div class="boot-box" id="bootBox">
+    <div class="boot-topbar">
+      <span class="bt-dot bd1"></span><span class="bt-dot bd2"></span><span class="bt-dot bd3"></span>
+      <span class="boot-title">pharmai@system:~$ ./initialize.sh</span>
+    </div>
+    <div class="boot-body" id="bootBody">
+      <!-- lines injected by JS -->
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progWrap">
+    <div class="prog-label"><span>SYSTEM INITIALIZATION</span><span id="progPct">0%</span></div>
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+
+  <div class="sp-enter" id="spEnter">▸ ENTERING SYSTEM...</div>
+</div>
+
+<script>
+/* ─── MATRIX RAIN ─── */
+(function(){
+  const c=document.getElementById('mc'),cx=c.getContext('2d');
+  let W,H,cols,drops;
+  const chars='PHARMAI01系統品質製造予測QUALITY YIELD ML LSTM XGB'.split('');
+  function init(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;cols=Math.floor(W/18);drops=Array(cols).fill(0).map(()=>Math.random()*-H/14);}
+  function draw(){cx.fillStyle='rgba(0,0,0,.07)';cx.fillRect(0,0,W,H);cx.font='13px JetBrains Mono,monospace';
+    drops.forEach((y,i)=>{const ch=chars[Math.floor(Math.random()*chars.length)],b=Math.random();
+      cx.fillStyle=b>.95?`rgba(180,255,180,${b*.9})`:`rgba(0,${Math.floor(130+b*100)},${Math.floor(30+b*34)},${b*.7})`;
+      cx.fillText(ch,i*18,y*14);if(y*14>H&&Math.random()>.975)drops[i]=0;drops[i]+=.5+Math.random()*.3;});}
+  init();window.addEventListener('resize',init);setInterval(draw,45);
+})();
+
+/* ─── BOOT SEQUENCE ─── */
+const LINES = [
+  {icon:'bl-load', label:'[LOAD]',  text:'Loading ensemble_model.pkl ...'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'XGBoost + RF + GradientBoosting — ready'},
+  {icon:'bl-load', label:'[LOAD]',  text:'Loading lstm_model.h5 ...'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'LSTM time-series model — 64 units — ready'},
+  {icon:'bl-load', label:'[LOAD]',  text:'Loading autoencoder.h5 ...'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'Autoencoder anomaly detector — threshold 0.485'},
+  {icon:'bl-load', label:'[LOAD]',  text:'Loading shap_explainer.pkl ...'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'SHAP TreeExplainer — 12 features — ready'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'Feature pipeline — 8 inputs → 12 features — ready'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'Flask API server — 5 endpoints — binding port 5000'},
+  {icon:'bl-ok',   label:'[ OK ]',  text:'Carbon estimator — India grid factor 0.82 kg/kWh'},
+  {icon:'bl-ok',   label:'[SYS]',   text:'All systems operational. Redirecting to dashboard...'},
+];
+
+const body = document.getElementById('bootBody');
+const progFill = document.getElementById('progFill');
+const progPct  = document.getElementById('progPct');
+
+// Pre-create DOM nodes
+const lineEls = LINES.map((l,i) => {
+  const div = document.createElement('div');
+  div.className = 'boot-line';
+  div.innerHTML = `<span class="${l.icon}">${l.label}</span><span class="bl-txt">${l.text}</span>`;
+  body.appendChild(div);
+  return div;
+});
+
+// Timing
+let step = 0;
+function nextLine(){
+  if(step >= LINES.length) return;
+  lineEls[step].classList.add('show');
+  const pct = Math.round((step+1) / LINES.length * 100);
+  progFill.style.width = pct + '%';
+  progPct.textContent  = pct + '%';
+  step++;
+  if(step < LINES.length){
+    const delay = step % 2 === 0 ? 280 : 180;
+    setTimeout(nextLine, delay);
+  } else {
+    // All done — show enter, then redirect
+    setTimeout(()=>{
+      document.getElementById('spEnter').classList.add('show');
+    }, 300);
+    setTimeout(()=>{
+      const ov=document.getElementById('exit-ov');
+      ov.style.pointerEvents='all';ov.style.opacity='1';
+      setTimeout(()=>{ window.location.href='index.html'; }, 420);
+    }, 1500);
+  }
+}
+
+// Kick off sequence with initial reveals
+setTimeout(()=>{ document.getElementById('spLogo').classList.add('show'); }, 100);
+setTimeout(()=>{ document.getElementById('spTag').classList.add('show'); }, 300);
+setTimeout(()=>{ document.getElementById('bootBox').classList.add('show'); }, 600);
+setTimeout(()=>{ document.getElementById('progWrap').classList.add('show'); }, 700);
+setTimeout(nextLine, 850);
+
+// Skip on click / keypress
+function skipToIndex(){
+  const ov=document.getElementById('exit-ov');
+  ov.style.pointerEvents='all';ov.style.opacity='1';
+  setTimeout(()=>{ window.location.href='index.html'; }, 400);
+}
+document.addEventListener('keydown', skipToIndex);
+document.addEventListener('click',   skipToIndex);
+</script>
+</body>
+</html>

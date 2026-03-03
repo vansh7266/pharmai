@@ -1,0 +1,38 @@
+{
+  "Hardness": {
+    "MAE": 1.864,
+    "RMSE": 2.234,
+    "R2": 0.9889,
+    "Accuracy": 97.93
+  },
+  "Friability": {
+    "MAE": 0.017,
+    "RMSE": 0.021,
+    "R2": 0.9942,
+    "Accuracy": 97.14
+  },
+  "Content_Uniformity": {
+    "MAE": 0.396,
+    "RMSE": 0.492,
+    "R2": 0.9809,
+    "Accuracy": 99.61
+  },
+  "Dissolution_Rate": {
+    "MAE": 0.423,
+    "RMSE": 0.685,
+    "R2": 0.9755,
+    "Accuracy": 99.52
+  },
+  "Tablet_Weight": {
+    "MAE": 0.549,
+    "RMSE": 0.647,
+    "R2": 0.9344,
+    "Accuracy": 99.73
+  },
+  "Disintegration_Time": {
+    "MAE": 0.366,
+    "RMSE": 0.582,
+    "R2": 0.9777,
+    "Accuracy": 96.52
+  }
+}

@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmAI — Intelligent Manufacturing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #000000;
+  --bg1:      #050a05;
+  --bg2:      #080f08;
+  --card:     #0a120a;
+  --card2:    #0d160d;
+
+  /* Balanced green - not too harsh, not too dull */
+  --g1:       #00e640;   
+  --g2:       #00b332;   
+  --g3:       #008023;   
+  --g4:       #004011;   
+  --g5:       #001405;   
+
+  --bdr:      rgba(0,230,64,.12);
+  --bdrh:     rgba(0,230,64,.35);
+  --bdrb:     rgba(0,230,64,.06);
+
+  --text:     #e8ffe8;
+  --soft:     #a0c8a0;
+  --muted:    #4a6e4a;
+  --dim:      #2a3e2a;
+
+  --fh:  'Rajdhani', sans-serif;
+  --fb:  'Inter', sans-serif;
+  --fm:  'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fb);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ── scanline overlay ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,230,64,.015) 2px,
+    rgba(0,230,64,.015) 4px
+  );
+  pointer-events: none;
+}
+
+/* ── subtle grid ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,230,64,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,230,64,.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  animation: grid-pulse 8s ease-in-out infinite alternate;
+}
+@keyframes grid-pulse {
+  from { opacity:.5; }
+  to   { opacity:.9; }
+}
+
+/* ── ambient green glow (balanced opacity) ── */
+.glow-blob {
+  position: fixed; border-radius: 50%;
+  filter: blur(140px); pointer-events: none; z-index: 0;
+}
+.gb1 {
+  width:700px; height:700px;
+  background: radial-gradient(var(--g3), transparent 65%);
+  top:-300px; left:-200px; opacity:.09;
+  animation: gb-move 20s ease-in-out infinite alternate;
+}
+.gb2 {
+  width:500px; height:500px;
+  background: radial-gradient(var(--g2), transparent 65%);
+  bottom:-200px; right:-150px; opacity:.07;
+  animation: gb-move 16s ease-in-out infinite alternate-reverse;
+}
+@keyframes gb-move {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(60px,40px) scale(1.15); }
+}
+
+/* ═══════════════════════
+   MATRIX RAIN CANVAS
+═══════════════════════ */
+#matrix-canvas {
+  position: fixed; top:0; left:0;
+  width:100%; height:100%;
+  z-index: 0; opacity: .05; 
+  pointer-events: none;
+}
+
+/* ═══════════════════════
+   NAV
+═══════════════════════ */
+
+nav {
+  position: fixed; top:0; left:0; right:0; z-index:300;
+  height: 62px;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0 3rem;
+  background: rgba(0,0,0,.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--bdr);
+  transition: border-color .3s, box-shadow .3s;
+}
+nav.scrolled {
+  border-color: rgba(0,230,64,.2);
+  box-shadow: 0 0 30px rgba(0,230,64,.08);
+}
+
+.logo {
+  font-family: var(--fh);
+  font-size: 1.7rem; font-weight: 700;
+  text-decoration: none; color: var(--text);
+  letter-spacing: .06em;
+}
+.logo em {
+  font-style: normal;
+  color: var(--g1);
+  text-shadow: 0 0 18px rgba(0,230,64,.5);
+}
+
+.nav-links { display:flex; gap:2.2rem; align-items:center; }
+.nav-links a {
+  font-family: var(--fm);
+  color: var(--muted); text-decoration: none;
+  font-size: .78rem; font-weight: 500;
+  letter-spacing: .06em;
+  transition: color .2s, text-shadow .2s;
+}
+.nav-links a:hover {
+  color: var(--g1);
+  text-shadow: 0 0 12px rgba(0,230,64,.4);
+}
+
+.nav-cta {
+  font-family: var(--fm);
+  background: transparent;
+  border: 1px solid var(--g2);
+  color: var(--g1) !important;
+  padding: .45rem 1.3rem;
+  border-radius: 4px;
+  font-size: .78rem !important;
+  letter-spacing: .08em;
+  transition: background .2s, box-shadow .2s, transform .2s !important;
+  text-shadow: 0 0 12px rgba(0,230,64,.3) !important;
+}
+.nav-cta:hover {
+  background: rgba(0,230,64,.08) !important;
+  box-shadow: 0 0 18px rgba(0,230,64,.25), inset 0 0 18px rgba(0,230,64,.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ═══════════════════════
+   HERO
+═══════════════════════ */
+.hero {
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 8rem 2rem 5rem;
+  overflow: hidden;
+}
+
+/* terminal cursor blink for hero */
+.hero-terminal-bar {
+  font-family: var(--fm);
+  font-size: .75rem;
+  color: var(--g3);
+  letter-spacing: .1em;
+  margin-bottom: 2rem;
+  display: flex; align-items:center; gap:.5rem;
+  animation: riseIn .7s ease both;
+}
+.term-prompt { color: var(--g1); }
+.term-cursor {
+  display: inline-block; width:8px; height:14px;
+  background: var(--g1);
+  animation: cur-blink 1s step-end infinite;
+  vertical-align: middle; margin-left:2px;
+  box-shadow: 0 0 8px var(--g1);
+}
+@keyframes cur-blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+h1.hero-title {
+  font-family: var(--fh);
+  font-size: clamp(3.5rem, 9vw, 8rem);
+  font-weight: 700;
+  line-height: .95;
+  letter-spacing: .04em;
+  margin-bottom: 1.6rem;
+  text-transform: uppercase;
+}
+.hero-title .r1 {
+  display: block;
+  color: var(--text);
+  animation: riseIn .7s ease .1s both;
+}
+.hero-title .r2 {
+  display: block;
+  color: var(--g1);
+  text-shadow: 0 0 35px rgba(0,230,64,.4), 0 0 70px rgba(0,230,64,.15);
+  animation: riseIn .7s ease .2s both, glow-pulse-text 3s ease-in-out infinite alternate;
+}
+@keyframes glow-pulse-text {
+  from { text-shadow: 0 0 25px rgba(0,230,64,.3), 0 0 50px rgba(0,230,64,.1); }
+  to   { text-shadow: 0 0 50px rgba(0,230,64,.6), 0 0 80px rgba(0,230,64,.25); }
+}
+
+.hero-sub {
+  max-width: 560px;
+  font-size: 1rem; color: var(--soft);
+  line-height: 1.75; margin: 0 auto 2.8rem;
+  animation: riseIn .7s ease .3s both;
+}
+
+.hero-btns {
+  display: flex; gap: 1rem;
+  flex-wrap: wrap; justify-content: center;
+  margin-bottom: 4.5rem;
+  animation: riseIn .7s ease .4s both;
+}
+
+.btn-green {
+  display: inline-flex; align-items:center; gap:.5rem;
+  background: var(--g2);
+  color: #000; font-weight: 700; font-size: .9rem;
+  padding: .85rem 2.2rem; border-radius: 4px;
+  text-decoration: none;
+  font-family: var(--fm); letter-spacing: .06em;
+  box-shadow: 0 0 25px rgba(0,230,64,.3);
+  transition: transform .2s, box-shadow .2s, background .2s;
+  text-transform: uppercase;
+}
+.btn-green:hover {
+  background: var(--g1);
+  transform: translateY(-3px);
+  box-shadow: 0 0 45px rgba(0,230,64,.5), 0 4px 18px rgba(0,230,64,.25);
+}
+
+.btn-outline-g {
+  display: inline-flex; align-items:center; gap:.5rem;
+  border: 1px solid var(--g3);
+  color: var(--g2); font-weight: 600; font-size: .9rem;
+  padding: .85rem 2.2rem; border-radius: 4px;
+  text-decoration: none;
+  font-family: var(--fm); letter-spacing: .06em;
+  text-transform: uppercase;
+  transition: border-color .2s, color .2s, transform .2s, box-shadow .2s, background .2s;
+}
+.btn-outline-g:hover {
+  border-color: var(--g1); color: var(--g1);
+  transform: translateY(-3px);
+  background: rgba(0,230,64,.05);
+  box-shadow: 0 0 18px rgba(0,230,64,.2);
+}
+
+/* stat strip */
+.stat-strip {
+  display: flex;
+  border: 1px solid var(--bdr);
+  border-radius: 6px; overflow: hidden;
+  background: rgba(0,10,0,.6);
+  backdrop-filter: blur(12px);
+  animation: riseIn .7s ease .55s both;
+}
+.stat-strip .sc {
+  flex:1; padding:1.4rem 2rem; text-align:center;
+  border-right: 1px solid var(--bdr);
+  transition: background .2s;
+}
+.stat-strip .sc:last-child { border-right: none; }
+.stat-strip .sc:hover { background: rgba(0,230,64,.05); }
+.sn {
+  display:block;
+  font-family: var(--fh);
+  font-size: 2.4rem; font-weight: 700;
+  color: var(--g1);
+  text-shadow: 0 0 18px rgba(0,230,64,.45);
+  line-height: 1;
+}
+.sl {
+  display:block; margin-top:.3rem;
+  font-family: var(--fm);
+  font-size: .65rem; color: var(--muted);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+
+@keyframes riseIn {
+  from { opacity:0; transform:translateY(32px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ═══════════════════════
+   SECTIONS
+═══════════════════════ */
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 1180px; margin: 0 auto;
+  padding: 7rem 2rem;
+}
+
+.sec-chip {
+  display: inline-flex; align-items:center; gap:.5rem;
+  font-family: var(--fm);
+  font-size: .68rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--g3);
+  border: 1px solid var(--bdr);
+  padding: .3rem .9rem; border-radius: 2px;
+  margin-bottom: 1rem;
+}
+.sec-chip::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--g1);
+  box-shadow: 0 0 8px var(--g1);
+  animation: cur-blink 2s step-end infinite;
+}
+
+.sec-h {
+  font-family: var(--fh);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; line-height: 1.08;
+  margin-bottom: 1rem; color: var(--text);
+}
+.sec-h span { color: var(--g1); }
+
+.sec-p {
+  color: var(--soft);
+  font-size: .95rem; line-height: 1.72;
+  max-width: 520px;
+}
+
+/* divider */
+.hr {
+  position: relative; z-index: 1;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bdr), transparent);
+  max-width: 1180px; margin: 0 auto;
+}
+
+/* reveal */
+.rv { opacity:0; transform:translateY(36px); transition: opacity .7s ease, transform .7s ease; }
+.rv.vis { opacity:1; transform:none; }
+.d1{transition-delay:.08s;} .d2{transition-delay:.18s;}
+.d3{transition-delay:.28s;} .d4{transition-delay:.38s;}
+.d5{transition-delay:.48s;}
+
+/* ═══════════════════════
+   PROBLEM CARDS
+═══════════════════════ */
+.prob-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 1.4rem; margin-top: 3rem;
+}
+.prob {
+  background: var(--card);
+  border: 1px solid var(--bdr);
+  border-radius: 6px; padding: 2.2rem;
+  position: relative; overflow: hidden;
+  transition: border-color .3s, transform .3s, box-shadow .3s;
+}
+.prob::before {
+  content: '';
+  position: absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--g2), transparent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .4s ease;
+}
+.prob:hover { border-color: var(--bdrh); transform: translateY(-5px); box-shadow: 0 8px 35px rgba(0,230,64,.07); }
+.prob:hover::before { transform: scaleX(1); }
+
+.prob-num {
+  font-family: var(--fm);
+  font-size: .65rem; color: var(--g3);
+  letter-spacing: .12em; margin-bottom: 1.2rem;
+  display: block;
+}
+.prob-ico { font-size: 2rem; margin-bottom: 1rem; display: block; }
+.prob h3 {
+  font-family: var(--fh);
+  font-size: 1.2rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: .7rem; color: var(--text);
+}
+.prob p { color: var(--soft); font-size: .88rem; line-height: 1.65; }
+.prob-tag {
+  display: inline-block; margin-top: 1.2rem;
+  font-family: var(--fm);
+  font-size: .7rem; padding: .3rem .8rem; border-radius: 2px;
+  border: 1px solid;
+}
+.pt1 { background: rgba(255,61,61,.06); color: #ff6b6b; border-color: rgba(255,61,61,.2); }
+.pt2 { background: rgba(255,200,0,.06); color: #ffc400; border-color: rgba(255,200,0,.2); }
+.pt3 { background: rgba(0,230,64,.06); color: var(--g2); border-color: var(--bdr); }
+
+/* ═══════════════════════
+   PIPELINE
+═══════════════════════ */
+.pipeline {
+  display: grid; grid-template-columns: repeat(5,1fr);
+  position: relative; gap: 0; margin-top: 4rem;
+}
+
+/* animated beam */
+.pipeline::before {
+  content: '';
+  position: absolute;
+  top: 30px; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--g3), var(--g1), var(--g3), transparent);
+  background-size: 300% 100%;
+  animation: beam-flow 3s linear infinite;
+}
+@keyframes beam-flow {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* glow layer */
+.pipeline::after {
+  content: '';
+  position: absolute;
+  top: 27px; left: 8%; right: 8%; height: 7px;
+  background: linear-gradient(90deg, transparent, var(--g3), var(--g1), var(--g3), transparent);
+  background-size: 300% 100%;
+  animation: beam-flow 3s linear infinite;
+  filter: blur(5px); opacity: .3;
+}
+
+.step {
+  display: flex; flex-direction: column;
+  align-items: center; text-align: center;
+  padding: 0 .5rem; position: relative; z-index:1;
+}
+
+.step-ring {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--bdr);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--fm);
+  font-size: 1rem; font-weight: 700; color: var(--g2);
+  margin-bottom: 1.1rem;
+  transition: border-color .3s, box-shadow .3s, color .3s;
+  position: relative;
+}
+.step-ring::after {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: 50%;
+  background: conic-gradient(var(--g1) 0deg, transparent 0deg);
+  z-index: -1; opacity: 0;
+  transition: opacity .3s;
+}
+.step:hover .step-ring {
+  border-color: var(--g1); color: var(--g1);
+  box-shadow: 0 0 0 8px rgba(0,230,64,.06), 0 0 25px rgba(0,230,64,.25);
+}
+.step:hover .step-ring::after { opacity: 1; animation: spin-ring 2s linear infinite; }
+@keyframes spin-ring {
+  to { background: conic-gradient(from 360deg, var(--g1) 0deg, transparent 0deg); transform: rotate(360deg); }
+}
+
+.step.vis .step-ring {
+  animation: ring-pop .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+.step:nth-child(1).vis .step-ring { animation-delay:.05s; }
+.step:nth-child(2).vis .step-ring { animation-delay:.2s; }
+.step:nth-child(3).vis .step-ring { animation-delay:.35s; }
+.step:nth-child(4).vis .step-ring { animation-delay:.5s; }
+.step:nth-child(5).vis .step-ring { animation-delay:.65s; }
+@keyframes ring-pop {
+  from { opacity:0; transform: scale(.4); }
+  to   { opacity:1; transform: scale(1); }
+}
+
+.step h4 {
+  font-family: var(--fh);
+  font-size: .85rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text); margin-bottom: .35rem;
+}
+.step p { font-family: var(--fm); font-size: .68rem; color: var(--muted); line-height: 1.5; }
+
+/* ═══════════════════════
+   MODEL CARDS
+═══════════════════════ */
+.model-grid {
+  display: grid; grid-template-columns: repeat(2,1fr);
+  gap: 1.4rem; margin-top: 3rem;
+}
+.mcard {
+  background: var(--card);
+  border: 1px solid var(--bdr);
+  border-radius: 6px; padding: 2rem;
+  display: flex; gap: 1.2rem; align-items: flex-start;
+  position: relative; overflow: hidden;
+  transition: border-color .3s, transform .3s, box-shadow .3s;
+}
+.mcard::before {
+  content: '';
+  position: absolute; bottom:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--g3), transparent);
+  transform: scaleX(0); transform-origin: center;
+  transition: transform .4s ease;
+}
+.mcard:hover { border-color: var(--bdrh); transform: translateY(-4px); box-shadow: 0 8px 35px rgba(0,230,64,.08); }
+.mcard:hover::before { transform: scaleX(1); }
+.mcard-ico {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  background: var(--g5);
+  border: 1px solid var(--bdr);
+}
+.mcard h3 {
+  font-family: var(--fh);
+  font-size: 1rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: .4rem; color: var(--g1);
+  text-shadow: 0 0 12px rgba(0,230,64,.3);
+}
+.mcard p { font-size: .85rem; color: var(--soft); line-height: 1.6; margin-bottom: .8rem; }
+.tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+.tag {
+  font-family: var(--fm);
+  font-size: .64rem; padding: .2rem .6rem;
+  border-radius: 2px; border: 1px solid var(--bdr);
+  background: var(--g5); color: var(--g3);
+  letter-spacing: .04em;
+}
+.tag-hi { border-color: rgba(0,230,64,.25); color: var(--g2); background: rgba(0,230,64,.05); }
+
+/* ═══════════════════════
+   DEMO
+═══════════════════════ */
+.demo-shell {
+  margin-top: 3rem;
+  border: 1px solid var(--bdr);
+  border-radius: 6px; overflow: hidden;
+  background: var(--card);
+  transition: border-color .3s, box-shadow .3s;
+}
+.demo-shell:hover { border-color: rgba(0,230,64,.25); box-shadow: 0 0 45px rgba(0,230,64,.06); }
+
+.demo-bar {
+  background: var(--bg);
+  border-bottom: 1px solid var(--bdr);
+  padding: .6rem 1.2rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.db-dot { width: 10px; height: 10px; border-radius: 50%; }
+.dd1 { background: #ff5f57; }
+.dd2 { background: #ffbd2e; }
+.dd3 { background: var(--g2); box-shadow: 0 0 6px var(--g2); }
+.db-title {
+  margin-left: auto;
+  font-family: var(--fm);
+  font-size: .7rem; color: var(--muted);
+  letter-spacing: .06em;
+}
+
+.demo-body {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+}
+
+.demo-left {
+  padding: 2.5rem;
+  border-right: 1px solid var(--bdr);
+}
+.demo-left h3 {
+  font-family: var(--fh);
+  font-size: 1.2rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--g1); margin-bottom: .5rem;
+  text-shadow: 0 0 12px rgba(0,230,64,.3);
+}
+.demo-left p { font-size: .85rem; color: var(--soft); margin-bottom: 1.8rem; line-height: 1.6; }
+
+.inp-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .7rem 1rem;
+  border: 1px solid var(--bdr);
+  border-radius: 4px; margin-bottom: .55rem;
+  background: var(--bg2);
+  transition: border-color .25s, background .25s;
+  cursor: pointer;
+}
+.inp-row:hover { border-color: rgba(0,230,64,.35); background: rgba(0,230,64,.04); }
+.ir-l { font-family: var(--fm); font-size: .74rem; color: var(--muted); letter-spacing: .04em; }
+.ir-r { display: flex; align-items: center; gap: .5rem; }
+.ir-v {
+  font-family: var(--fh);
+  font-size: 1.1rem; font-weight: 700;
+  color: var(--g1);
+  text-shadow: 0 0 10px rgba(0,230,64,.35);
+}
+.ir-u { font-family: var(--fm); font-size: .68rem; color: var(--muted); }
+
+.run-btn {
+  width: 100%; margin-top: 1.3rem;
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  background: transparent;
+  border: 1px solid var(--g2);
+  color: var(--g1);
+  font-family: var(--fm); font-size: .82rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: .9rem;
+  border-radius: 4px; cursor: pointer;
+  transition: background .2s, box-shadow .2s, transform .2s;
+  text-shadow: 0 0 10px rgba(0,230,64,.35);
+}
+.run-btn:hover {
+  background: rgba(0,230,64,.08);
+  box-shadow: 0 0 25px rgba(0,230,64,.2), inset 0 0 25px rgba(0,230,64,.05);
+  transform: translateY(-2px);
+}
+
+/* results */
+.demo-right { padding: 2.5rem; }
+.demo-right h3 {
+  font-family: var(--fh);
+  font-size: 1.1rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 1.2rem; color: var(--text);
+}
+
+.res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+
+.res-card {
+  padding: .85rem 1rem; border-radius: 4px;
+  border: 1px solid var(--bdr);
+  background: var(--bg2);
+  opacity: 0; transform: translateY(12px) scale(.96);
+  transition: opacity .3s ease, transform .3s ease;
+}
+.res-card.show { opacity: 1; transform: none; }
+.res-card.rp { border-color: rgba(0,230,64,.25); background: rgba(0,230,64,.05); }
+.res-card.rf { border-color: rgba(255,80,80,.25); background: rgba(255,80,80,.04); }
+.res-name { font-family: var(--fm); font-size: .67rem; color: var(--muted); letter-spacing: .06em; display: block; margin-bottom: .25rem; }
+.res-val { font-family: var(--fh); font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.res-unit { font-family: var(--fm); font-size: .62rem; color: var(--muted); }
+.res-badge {
+  display: inline-block; margin-top: .3rem;
+  font-family: var(--fm); font-size: .65rem; font-weight: 700;
+  padding: .15rem .5rem; border-radius: 2px;
+}
+.rb-pass { background: rgba(0,230,64,.12); color: var(--g1); border: 1px solid rgba(0,230,64,.25); }
+.rb-fail { background: rgba(255,80,80,.1); color: #ff6b6b; border: 1px solid rgba(255,80,80,.2); }
+
+.verdict-bar {
+  margin-top: .9rem; padding: 1rem 1.2rem;
+  border: 1px solid var(--bdr); border-radius: 4px;
+  display: flex; align-items: center; justify-content: space-between;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.verdict-bar.show { opacity: 1; transform: none; }
+.vb-ok { border-color: rgba(0,230,64,.3); background: rgba(0,230,64,.07); }
+.vb-l { font-family: var(--fm); font-size: .72rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.vb-v { font-family: var(--fh); font-size: 1.1rem; font-weight: 700; letter-spacing: .06em; }
+.vv-ok { color: var(--g1); text-shadow: 0 0 14px rgba(0,230,64,.45); }
+
+.ai-bubble {
+  margin-top: .8rem; padding: .9rem 1rem;
+  border: 1px solid rgba(0,230,64,.15);
+  border-radius: 4px; background: rgba(0,230,64,.04);
+  font-family: var(--fm); font-size: .74rem;
+  color: var(--soft); line-height: 1.6;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.ai-bubble.show { opacity: 1; transform: none; }
+.ai-bubble .ai-label { color: var(--g2); font-weight: 700; margin-bottom: .4rem; display: block; }
+
+/* ═══════════════════════
+   IMPACT
+═══════════════════════ */
+.imp-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 1.2rem; margin-top: 3rem;
+}
+.imp {
+  background: var(--card); border: 1px solid var(--bdr);
+  border-radius: 6px; padding: 2rem 1.5rem; text-align: center;
+  position: relative; overflow: hidden;
+  transition: transform .3s, border-color .3s, box-shadow .3s;
+}
+.imp:hover { transform: translateY(-5px); border-color: var(--bdrh); box-shadow: 0 8px 25px rgba(0,230,64,.09); }
+.imp::after {
+  content: '';
+  position: absolute; bottom:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--g2), transparent);
+  transform: scaleX(0); transform-origin: center;
+  transition: transform .4s ease;
+}
+.imp:hover::after { transform: scaleX(1); }
+.imp-n {
+  display: block;
+  font-family: var(--fh);
+  font-size: 2.8rem; font-weight: 700;
+  color: var(--g1);
+  text-shadow: 0 0 20px rgba(0,230,64,.4);
+  line-height: 1; margin-bottom: .5rem;
+}
+.imp-l { font-family: var(--fm); font-size: .7rem; color: var(--muted); line-height: 1.5; text-transform: uppercase; letter-spacing: .06em; }
+
+/* ═══════════════════════
+   PAGE CARDS
+═══════════════════════ */
+.pg-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 1.2rem; margin-top: 3rem;
+}
+.pgc {
+  display: flex; flex-direction: column; align-items: center; gap: .9rem;
+  text-align: center; text-decoration: none;
+  background: var(--card); border: 1px solid var(--bdr);
+  border-radius: 6px; padding: 2.4rem 1.2rem; color: var(--text);
+  transition: border-color .3s, transform .3s, box-shadow .3s, background .3s;
+  position: relative; overflow: hidden;
+}
+.pgc::before {
+  content: '';
+  position: absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--g2), transparent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .4s ease;
+}
+.pgc:hover { border-color: var(--bdrh); transform: translateY(-6px); box-shadow: 0 10px 35px rgba(0,230,64,.09); background: rgba(0,230,64,.03); }
+.pgc:hover::before { transform: scaleX(1); }
+.pg-ico {
+  width: 60px; height: 60px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  border: 1px solid var(--bdr);
+  background: var(--g5);
+  transition: transform .3s, box-shadow .3s;
+}
+.pgc:hover .pg-ico { transform: scale(1.12) rotate(-5deg); box-shadow: 0 0 18px rgba(0,230,64,.2); }
+.pgc strong {
+  font-family: var(--fh);
+  font-size: .95rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--g2);
+}
+.pgc span { font-family: var(--fm); font-size: .72rem; color: var(--muted); line-height: 1.5; }
+
+/* ═══════════════════════
+   FOOTER
+═══════════════════════ */
+footer {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--bdr);
+  padding: 2rem 3rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+footer p { font-family: var(--fm); font-size: .72rem; color: var(--muted); letter-spacing: .04em; }
+.f-tags { display: flex; gap: .6rem; }
+.ft {
+  font-family: var(--fm);
+  font-size: .62rem; font-weight: 700;
+  padding: .25rem .65rem; border-radius: 2px;
+  border: 1px solid var(--bdr);
+  background: var(--g5); color: var(--g3);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* ═══════════════════════
+   RESPONSIVE
+═══════════════════════ */
+@media(max-width:900px) {
+  .prob-grid,.model-grid,.imp-grid,.pg-grid { grid-template-columns: 1fr 1fr; }
+  .pipeline { grid-template-columns: repeat(3,1fr); gap:1rem; }
+  .pipeline::before,.pipeline::after { display:none; }
+  .demo-body { grid-template-columns: 1fr; }
+  .demo-left { border-right:none; border-bottom:1px solid var(--bdr); }
+  nav { padding: 0 1.5rem; }
+}
+@media(max-width:560px) {
+  .prob-grid,.model-grid,.imp-grid,.pg-grid { grid-template-columns: 1fr; }
+  .stat-strip { flex-wrap: wrap; }
+  .hero-title { font-size: 3rem; }
+}
+
+/* ── PIPELINE SEQUENTIAL ANIMATION ── */
+.pipe-step {
+  opacity: 0;
+  transform: translateY(28px) scale(0.96);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.pipe-step.pipe-vis {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+<div class="glow-blob gb1"></div>
+<div class="glow-blob gb2"></div>
+
+<!-- ════ NAV ════ -->
+<nav id="nav">
+  <a href="index.html" class="logo">PHARM<em>AI</em></a>
+  <div class="nav-links">
+    <a href="dashboard.html">DASHBOARD</a>
+    <a href="predictor.html">PREDICTOR</a>
+    <a href="analytics.html">ANALYTICS</a>
+    <a href="history.html">HISTORY</a> 
+    <a href="about.html">ABOUT</a>
+    <a href="predictor.html" class="nav-cta">TRY LIVE →</a>
+    
+  </div>
+</nav>
+
+
+<!-- ════ HERO ════ -->
+<section class="hero" id="hero">
+  <div class="hero-terminal-bar">
+    <span class="term-prompt">pharmai@manufacturing:~$</span>
+    <span>initializing_intelligence_system</span>
+    <span class="term-cursor"></span>
+  </div>
+
+  <h1 class="hero-title">
+    <span class="r1">PREDICT QUALITY.</span>
+    <span class="r2">PREVENT FAILURE.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Know if your pharmaceutical batch will pass quality checks
+    before production finishes — powered by Ensemble ML, LSTM, and
+    Autoencoder deep learning on just 8 process parameters.
+  </p>
+
+  <div class="hero-btns">
+    <a href="predictor.html" class="btn-green">⚗ RUN PREDICTION</a>
+    <a href="dashboard.html" class="btn-outline-g">📡 LIVE DASHBOARD</a>
+  </div>
+
+  <div class="stat-strip">
+    <div class="sc"><span class="sn" data-cnt="90" data-sfx="%+">0</span><span class="sl">Pred. Accuracy</span></div>
+    <div class="sc"><span class="sn" data-cnt="6">0</span><span class="sl">Quality Targets</span></div>
+    <div class="sc"><span class="sn" data-cnt="3">0</span><span class="sl">DL Models</span></div>
+    <div class="sc"><span class="sn" data-cnt="8">0</span><span class="sl">Process Inputs</span></div>
+    <div class="sc"><span class="sn" data-cnt="8">0</span><span class="sl">Mfg. Phases</span></div>
+  </div>
+</section>
+
+<!-- ════ PROBLEMS ════ -->
+<div class="hr"></div>
+<div class="wrap" id="s-prob">
+  <div class="sec-chip rv">The Challenge</div>
+  <h2 class="sec-h rv d1">Three Problems <span>Costing Crores</span></h2>
+  <p class="sec-p rv d2">Manufacturing fails silently. Our AI catches it before it happens.</p>
+
+  <div class="prob-grid">
+    <div class="prob rv d1">
+      <span class="prob-num">// PROBLEM_01</span>
+      <span class="prob-ico">🧪</span>
+      <h3>Quality Failures</h3>
+      <p>12% of batches fail inspection — Hardness, Dissolution Rate, Content Uniformity out of spec. Discovered only after production completes.</p>
+      <span class="prob-tag pt1">₹45,000 per failed batch</span>
+    </div>
+    <div class="prob rv d2">
+      <span class="prob-num">// PROBLEM_02</span>
+      <span class="prob-ico">⚡</span>
+      <h3>Energy Waste</h3>
+      <p>Compression and Drying consume 70% of total energy. Anomalies go undetected for hours, silently causing equipment damage.</p>
+      <span class="prob-tag pt2">No real-time monitoring</span>
+    </div>
+    <div class="prob rv d3">
+      <span class="prob-num">// PROBLEM_03</span>
+      <span class="prob-ico">📉</span>
+      <h3>Reactive Operations</h3>
+      <p>Operators rely on experience, not data. Machine failures discovered after breakdown — no time to intervene or prevent loss.</p>
+      <span class="prob-tag pt3">24–48hr detection lag</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PIPELINE ════ -->
+<div class="hr"></div>
+<div class="wrap" id="s-pipe">
+  <div class="sec-chip rv">System Architecture</div>
+  <h2 class="sec-h rv d1">From Sensor Data<br>to <span>Operator Action</span></h2>
+  <p class="sec-p rv d2">Raw sensor data goes in. Operator decisions come out. Five AI layers in between.</p>
+
+  <div class="pipeline" id="pipeline">
+    <div class="step pipe-step" data-step="0"><div class="step-ring">01</div><h4>Data Ingestion</h4><p>60 batches · 8 phases · 2 CSV sources</p></div>
+    <div class="step pipe-step" data-step="1"><div class="step-ring">02</div><h4>Feature Eng.</h4><p>8 raw inputs → 12 physics-based features</p></div>
+    <div class="step pipe-step" data-step="2"><div class="step-ring">03</div><h4>Ensemble ML</h4><p>XGBoost + Random Forest + Gradient Boost</p></div>
+    <div class="step pipe-step" data-step="3"><div class="step-ring">04</div><h4>Deep Learning</h4><p>LSTM time series + Autoencoder anomaly</p></div>
+    <div class="step pipe-step" data-step="4"><div class="step-ring">05</div><h4>Agentic AI</h4><p>SHAP insights → English operator alerts</p></div>
+  </div>
+</div>
+
+<!-- ════ MODELS ════ -->
+<div class="hr"></div>
+<div class="wrap" id="s-models">
+  <div class="sec-chip rv">Our Models</div>
+  <h2 class="sec-h rv d1">Four AI Systems.<br><span>One Solution.</span></h2>
+  <p class="sec-p rv d2">Each model tackles a different layer of the manufacturing intelligence problem.</p>
+
+  <div class="model-grid">
+    <div class="mcard rv d1">
+      <div class="mcard-ico">🤖</div>
+      <div>
+        <h3>Ensemble Predictor</h3>
+        <p>XGBoost + Random Forest + Gradient Boosting predicts all 6 quality targets simultaneously with weighted voting.</p>
+        <div class="tags">
+          <span class="tag tag-hi">XGBoost 40%</span>
+          <span class="tag tag-hi">RF 35%</span>
+          <span class="tag tag-hi">GB 25%</span>
+          <span class="tag tag-hi">&gt;90% Accuracy</span>
+        </div>
+      </div>
+    </div>
+    <div class="mcard rv d2">
+      <div class="mcard-ico">⏱️</div>
+      <div>
+        <h3>LSTM Time Series</h3>
+        <p>2-layer LSTM reads 15-minute sensor windows to predict next-minute power — detecting dangerous buildup patterns early.</p>
+        <div class="tags">
+          <span class="tag">64-unit LSTM</span>
+          <span class="tag">15-min window</span>
+          <span class="tag">EarlyStopping</span>
+        </div>
+      </div>
+    </div>
+    <div class="mcard rv d3">
+      <div class="mcard-ico">🔬</div>
+      <div>
+        <h3>Autoencoder Anomaly</h3>
+        <p>Trained on normal data only. High reconstruction error = anomaly. Feeds directly into predictive maintenance risk scores per phase.</p>
+        <div class="tags">
+          <span class="tag">6→2→6 bottleneck</span>
+          <span class="tag">μ+2σ threshold</span>
+          <span class="tag tag-hi">Per-phase risk</span>
+        </div>
+      </div>
+    </div>
+    <div class="mcard rv d4">
+      <div class="mcard-ico">🧠</div>
+      <div>
+        <h3>Agentic AI Alerts</h3>
+        <p>Reads SHAP values, anomaly flags and maintenance risk — generates plain English corrective action alerts operators act on immediately.</p>
+        <div class="tags">
+          <span class="tag tag-hi">SHAP-powered</span>
+          <span class="tag">3 alert types</span>
+          <span class="tag tag-hi">Plain English</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ DEMO ════ -->
+<div class="hr"></div>
+<div class="wrap" id="s-demo">
+  <div class="sec-chip rv">See It In Action</div>
+  <h2 class="sec-h rv d1">Type Parameters.<br><span>Watch the AI Decide.</span></h2>
+  <p class="sec-p rv d2">Hit RUN and watch PASS/FAIL results appear live — plus an AI-generated diagnostic alert.</p>
+
+  <div class="demo-shell rv d2">
+    <div class="demo-bar">
+      <span class="db-dot dd1"></span>
+      <span class="db-dot dd2"></span>
+      <span class="db-dot dd3"></span>
+      <span class="db-title">pharmai · ensemble model · 8 inputs → 6 quality predictions</span>
+    </div>
+    <div class="demo-body">
+      <div class="demo-left">
+        <h3>Batch Parameters</h3>
+        <p>These 8 values are what the operator sets. The ensemble model predicts the resulting quality in milliseconds.</p>
+        <div class="inp-row"><span class="ir-l">COMPRESSION_FORCE</span><span class="ir-r"><span class="ir-v">11.5</span><span class="ir-u"> kN</span></span></div>
+        <div class="inp-row"><span class="ir-l">DRYING_TEMPERATURE</span><span class="ir-r"><span class="ir-v">60</span><span class="ir-u"> °C</span></span></div>
+        <div class="inp-row"><span class="ir-l">MACHINE_SPEED</span><span class="ir-r"><span class="ir-v">170</span><span class="ir-u"> RPM</span></span></div>
+        <div class="inp-row"><span class="ir-l">DRYING_TIME</span><span class="ir-r"><span class="ir-v">28</span><span class="ir-u"> min</span></span></div>
+        <div class="inp-row"><span class="ir-l">BINDER_AMOUNT</span><span class="ir-r"><span class="ir-v">9.0</span><span class="ir-u"> kg</span></span></div>
+        <div class="inp-row"><span class="ir-l">GRANULATION_TIME</span><span class="ir-r"><span class="ir-v">16</span><span class="ir-u"> min</span></span></div>
+        <button class="run-btn" id="runBtn" onclick="runDemo()">▶ RUN PREDICTION</button>
+      </div>
+      <div class="demo-right">
+        <h3>Quality Predictions</h3>
+        <div class="res-grid" id="resGrid">
+          <div class="res-card" data-v="94.2" data-u="N" data-p="1"><span class="res-name">HARDNESS</span><div><span class="res-val">—</span><span class="res-unit"> N</span></div><span class="res-badge">—</span></div>
+          <div class="res-card" data-v="0.71" data-u="%" data-p="1"><span class="res-name">FRIABILITY</span><div><span class="res-val">—</span><span class="res-unit"> %</span></div><span class="res-badge">—</span></div>
+          <div class="res-card" data-v="99.8" data-u="%" data-p="1"><span class="res-name">CONTENT UNIF.</span><div><span class="res-val">—</span><span class="res-unit"> %</span></div><span class="res-badge">—</span></div>
+          <div class="res-card" data-v="91.4" data-u="%" data-p="1"><span class="res-name">DISSOLUTION</span><div><span class="res-val">—</span><span class="res-unit"> %</span></div><span class="res-badge">—</span></div>
+          <div class="res-card" data-v="203" data-u="mg" data-p="1"><span class="res-name">TABLET WEIGHT</span><div><span class="res-val">—</span><span class="res-unit"> mg</span></div><span class="res-badge">—</span></div>
+          <div class="res-card" data-v="8.3" data-u="min" data-p="1"><span class="res-name">DISINTEGRATION</span><div><span class="res-val">—</span><span class="res-unit"> min</span></div><span class="res-badge">—</span></div>
+        </div>
+        <div class="verdict-bar" id="vbar"><span class="vb-l">BATCH VERDICT</span><span class="vb-v" id="vval">awaiting input...</span></div>
+        <div class="ai-bubble" id="aiBubble">
+          <span class="ai-label">▸ AGENTIC AI DIAGNOSTIC</span>
+          All 6 targets within spec. Compression Force 11.5 kN is the dominant driver of Dissolution Rate (SHAP: +0.09). Autoencoder anomaly rate nominal across all phases. No corrective action required — batch approved for release.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ IMPACT ════ -->
+<div class="hr"></div>
+<div class="wrap" id="s-impact">
+  <div class="sec-chip rv">Business Impact</div>
+  <h2 class="sec-h rv d1"><span>Measurable Results.</span><br>Real Numbers.</h2>
+  <p class="sec-p rv d2">What this system delivers when deployed in production.</p>
+  <div class="imp-grid">
+    <div class="imp rv d1"><span class="imp-n" data-cnt="90" data-sfx="%+">0</span><div class="imp-l">Batch Quality<br>Prediction Accuracy</div></div>
+    <div class="imp rv d2"><span class="imp-n">12%→3%</span><div class="imp-l">Rejection Rate<br>Reduction</div></div>
+    <div class="imp rv d3"><span class="imp-n" data-cnt="20" data-sfx="%">0</span><div class="imp-l">Carbon Reduction<br>Achievable</div></div>
+    <div class="imp rv d4"><span class="imp-n">24hr</span><div class="imp-l">Early Maintenance<br>Warning Lead Time</div></div>
+  </div>
+</div>
+
+<!-- ════ PAGES ════ -->
+<div class="hr"></div>
+<div class="wrap" id="s-pages">
+  <div class="sec-chip rv">Explore</div>
+  <h2 class="sec-h rv d1">Everything In<br><span>One Platform.</span></h2>
+  <p class="sec-p rv d2">Four tools built on production-grade ML code.</p>
+  <div class="pg-grid">
+    <a href="dashboard.html" class="pgc rv d1"><div class="pg-ico">📡</div><strong>Live Dashboard</strong><span>Real-time anomaly monitoring and maintenance risk scores</span></a>
+    <a href="predictor.html" class="pgc rv d2"><div class="pg-ico">⚗️</div><strong>Batch Predictor</strong><span>Input parameters and get instant quality PASS/FAIL</span></a>
+    <a href="analytics.html" class="pgc rv d3"><div class="pg-ico">📈</div><strong>Analytics</strong><span>SHAP explainability, carbon footprint and model metrics</span></a>
+    <a href="about.html"     class="pgc rv d4"><div class="pg-ico">🏆</div><strong>Coverage</strong><span>Full gap analysis and problem statement alignment</span></a>
+  </div>
+</div>
+
+<!-- ════ FOOTER ════ -->
+<footer>
+  <p>© 2026 PHARMAI — INTELLIGENT MANUFACTURING SYSTEM</p>
+  <div class="f-tags">
+    <span class="ft">XGBoost + RF + GB</span>
+    <span class="ft">LSTM + Autoencoder</span>
+    <span class="ft">Agentic AI</span>
+  </div>
+</footer>
+
+<script>
+/* ─── MATRIX RAIN ─── */
+(function(){
+  const c  = document.getElementById('matrix-canvas');
+  const cx = c.getContext('2d');
+  let W, H, cols, drops;
+  const chars = 'PHARMAI01系統品質製造予測エラー検出QUALITY YIELD PERFORMANCE ML LSTM XGB'.split('');
+
+  function init(){
+    W = c.width  = window.innerWidth;
+    H = c.height = window.innerHeight;
+    cols  = Math.floor(W / 18);
+    drops = Array(cols).fill(1).map(() => Math.random() * -H/14);
+  }
+
+  function draw(){
+    cx.fillStyle = 'rgba(0,0,0,.06)';
+    cx.fillRect(0, 0, W, H);
+    cx.font = '13px JetBrains Mono, monospace';
+    drops.forEach((y, i) => {
+      const ch = chars[Math.floor(Math.random() * chars.length)];
+      const brightness = Math.random();
+      cx.fillStyle = brightness > .95
+        ? `rgba(180,255,180,${brightness * 0.9})`
+        : `rgba(0,${Math.floor(130 + brightness*100)},${Math.floor(30 + brightness*34)},${brightness*.75})`;
+      cx.fillText(ch, i * 18, y * 14);
+      if (y * 14 > H && Math.random() > .975) drops[i] = 0;
+      drops[i] += .5 + Math.random() * .3;
+    });
+  }
+
+  init();
+  window.addEventListener('resize', init);
+  setInterval(draw, 45);
+})();
+
+/* ─── COUNTER ─── */
+function runCounter(el){
+  if(el._d) return; el._d = true;
+  const tgt = parseInt(el.dataset.cnt), sfx = el.dataset.sfx || '';
+  const dur = 1800, t0 = performance.now();
+  (function tick(now){
+    const p = Math.min((now-t0)/dur, 1);
+    const e = 1 - Math.pow(1-p, 4);
+    el.textContent = Math.floor(e * tgt) + sfx;
+    if(p < 1) requestAnimationFrame(tick);
+  })(performance.now());
+}
+
+/* ─── SCROLL REVEAL ─── */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if(!en.isIntersecting) return;
+    en.target.classList.add('vis');
+    en.target.querySelectorAll('[data-cnt]').forEach(runCounter);
+    en.target.querySelectorAll('.step').forEach(s => s.classList.add('vis'));
+  });
+}, { threshold: .12 });
+
+document.querySelectorAll('.wrap').forEach(el => io.observe(el));
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* Hero counters */
+setTimeout(() => {
+  document.querySelectorAll('.stat-strip [data-cnt]').forEach(runCounter);
+}, 700);
+
+/* ─── DEMO ANIMATION ─── */
+let running = false;
+
+function runDemo(){
+  if(running) return;
+  running = true;
+  const btn   = document.getElementById('runBtn');
+  const cards = document.querySelectorAll('.res-card');
+  const vbar  = document.getElementById('vbar');
+  const vval  = document.getElementById('vval');
+  const aib   = document.getElementById('aiBubble');
+
+  btn.textContent = '⟳  COMPUTING...';
+  btn.style.opacity = '.5';
+  btn.style.pointerEvents = 'none';
+
+  /* reset */
+  cards.forEach(c => { c.classList.remove('show','rp','rf'); c.querySelector('.res-val').textContent='—'; c.querySelector('.res-badge').textContent='—'; c.querySelector('.res-badge').className='res-badge'; });
+  vbar.classList.remove('show','vb-ok');
+  aib.classList.remove('show');
+  vval.textContent = 'COMPUTING...';
+  vval.className = 'vb-v';
+
+  setTimeout(() => {
+    cards.forEach((card, i) => {
+      setTimeout(() => {
+        const v    = card.dataset.v;
+        const u    = card.dataset.u;
+        const pass = card.dataset.p === '1';
+        card.classList.add(pass ? 'rp' : 'rf');
+        card.querySelector('.res-val').textContent = v;
+        const badge = card.querySelector('.res-badge');
+        badge.textContent = pass ? '✓ PASS' : '✗ FAIL';
+        badge.className   = 'res-badge ' + (pass ? 'rb-pass' : 'rb-fail');
+        card.classList.add('show');
+      }, i * 150);
+    });
+
+    setTimeout(() => {
+      vbar.classList.add('vb-ok','show');
+      vval.textContent  = '✓  BATCH APPROVED';
+      vval.className    = 'vb-v vv-ok';
+    }, cards.length * 150 + 80);
+
+    setTimeout(() => {
+      aib.classList.add('show');
+    }, cards.length * 150 + 320);
+
+    setTimeout(() => {
+      btn.textContent = '▶ RUN AGAIN';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+      running = false;
+    }, cards.length * 150 + 600);
+
+  }, 500);
+}
+
+/* auto-run demo when visible */
+const demoIo = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if(en.isIntersecting){ setTimeout(runDemo, 400); demoIo.disconnect(); }
+  });
+}, { threshold: .35 });
+const ds = document.querySelector('.demo-shell');
+if(ds) demoIo.observe(ds);
+
+/* nav scroll */
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', scrollY > 20);
+});
+
+/* ── PIPELINE SEQUENTIAL REVEAL ── */
+(function(){
+  const steps = document.querySelectorAll('.pipe-step');
+  let pipeTriggered = false;
+  const pipeObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting && !pipeTriggered) {
+        pipeTriggered = true;
+        steps.forEach((step, i) => {
+          setTimeout(() => step.classList.add('pipe-vis'), i * 220);
+        });
+      }
+    });
+  }, { threshold: 0.25 });
+  if(steps.length > 0) pipeObs.observe(steps[0].closest('.pipeline') || steps[0]);
+})();
+
+</script>
+</body>
+</html>
