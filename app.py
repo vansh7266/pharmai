@@ -100,10 +100,27 @@ def engineer(p):
     p["Moisture_Lubricant_Ratio"]= p["Moisture_Content"]/ (p["Lubricant_Conc"]    + 0.01)
     return p
 
+# def run_ensemble(p):
+#     X = np.array([[p[f] for f in ALL_FEATURES]])
+#     X_sc = scaler.transform(X)
+#     y = (xgb_model.predict(X_sc)*0.40 + rf_model.predict(X_sc)*0.35 + gb_model.predict(X_sc)*0.25)[0]
+#     return y
+
 def run_ensemble(p):
-    X = np.array([[p[f] for f in ALL_FEATURES]])
-    X_sc = scaler.transform(X)
+    import pandas as pd
+    
+    # 1. Convert the input to a Pandas DataFrame to lock in the column names
+    df = pd.DataFrame([p])
+    
+    # 2. Dynamically ask the XGBoost model EXACTLY what column order it was trained on
+    # This completely eliminates the scrambled features bug!
+    correct_order = xgb_model.feature_names_in_
+    df = df[correct_order]
+    
+    # 3. Apply the scaler and run the ensemble prediction
+    X_sc = scaler.transform(df)
     y = (xgb_model.predict(X_sc)*0.40 + rf_model.predict(X_sc)*0.35 + gb_model.predict(X_sc)*0.25)[0]
+    
     return y
 
 def make_alerts(preds, params):
