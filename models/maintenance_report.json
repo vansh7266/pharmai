@@ -23,7 +23,7 @@
   "Milling": {
     "risk_score": 72.2,
     "risk_level": "HIGH \u2014 Schedule Inspection",
-    "anomaly_pct": 33.3,
+    "anomaly_pct": 26.7,
     "avg_vibration": 8.066,
     "power_std": 5.24
   },
