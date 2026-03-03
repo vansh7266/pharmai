@@ -446,7 +446,7 @@ async function initAnalytics(){
   try {
     const ctrl = new AbortController();
     setTimeout(()=>ctrl.abort(), 2000);
-    const res  = await fetch('http://localhost:5000/analytics/summary', {signal:ctrl.signal});
+    const res  = await fetch('https://pharmai-0k9k.onrender.com/analytics/summary', {signal:ctrl.signal});
     if(res.ok){
       const data = await res.json();
       metrics = data.ensemble_metrics || null;
